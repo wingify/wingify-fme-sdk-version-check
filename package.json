@@ -1,0 +1,37 @@
+{
+  "name": "wingify-fme-sdk-version-check",
+  "version": "1.0.0",
+  "description": "GitHub Action to check the version of the Wingify Feature Experimentation SDK",
+  "main": "dist/index.js",
+  "scripts": {
+    "build:ts": "tsc",
+    "build": "npm run build:ts && npx ncc build lib/index.js -o dist",
+    "prettier": "prettier -w src/**/*.ts *.md"
+  },
+  "keywords": [],
+  "author": "Wingify Developers",
+  "license": "Apache-2.0",
+  "type": "commonjs",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/wingify/wingify-fme-sdk-version-check"
+  },
+  "dependencies": {
+    "@slack/web-api": "^7.0.0",
+    "axios": "^1.13.6",
+    "fast-glob": "^3.3.3",
+    "semver": "^7.7.4"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.15",
+    "@types/semver": "^7.7.1",
+    "@vercel/ncc": "^0.38.4",
+    "prettier": "^3.9.6",
+    "typescript": "^5.7.0"
+  },
+  "engineStrict": true,
+  "engines": {
+    "node": ">= 8.9.0",
+    "yarn": ">= 1.22.17"
+  }
+}

@@ -1,0 +1,12 @@
+name: "Wingify SDK Version Check"
+
+description: "Checks if Wingify SDK used in the repo is outdated"
+
+inputs:
+  slack_webhook:
+    description: "Slack webhook for notification"
+    required: false
+
+runs:
+  using: "node20"
+  main: "dist/index.js"
