@@ -4,23 +4,27 @@ This GitHub Action scans a repository for Wingify Feature Management (FME) SDKs 
 
 ### Supported SDKs
 
-- **Node.js**: `vwo-fme-node-sdk`
-- **Java**: `vwo-fme-java-sdk`
-- **PHP**: `vwo/vwo-fme-php-sdk`
-- **Go**: `github.com/wingify/vwo-fme-go-sdk`
-- **Ruby**: `vwo-fme-ruby-sdk`
-- **.NET**: `VWO.FME.Sdk`
-- **Python**: `vwo-fme-python-sdk`
+The action supports both VWO and Wingify branded SDK packages:
+
+- **Node.js**: `vwo-fme-node-sdk`, `wingify-fme-node-sdk`
+- **Java**: `vwo-fme-java-sdk`, `wingify-fme-java-sdk`
+- **PHP**: `vwo/vwo-fme-php-sdk`, `wingify/wingify-fme-php-sdk`
+- **Go**: `github.com/wingify/vwo-fme-go-sdk`, `github.com/wingify/wingify-fme-go-sdk`
+- **Ruby**: `vwo-fme-ruby-sdk`, `wingify-fme-ruby-sdk`
+- **.NET**: `VWO.FME.Sdk`, `Wingify.FME.Sdk`
+- **Python**: `vwo-fme-python-sdk`, `wingify-fme-python-sdk`
 
 ### How it works
 
 - **Scans** the repository for common manifest files:
   - `package.json`, `pom.xml`, `composer.json`, `go.mod`, `Gemfile`, `*.csproj`, `requirements.txt`
-- **Detects** whether any of the supported Wingify SDKs are declared.
+- **Detects** whether any of the supported Wingify SDKs (both VWO and Wingify branded) are declared.
 - **Fetches** the latest version of each SDK from the matching package registry (npm, Maven Central, Packagist, Go module proxy, RubyGems, NuGet, PyPI).
 - **Compares** the current version or version range in the repo with the latest release.
 - **Logs** whether each detected SDK is up to date or outdated.
 - **Notifies** Slack when an SDK is outdated (optional; see environment variables below).
+
+**Note**: The action automatically detects both VWO-branded (`vwo-*`) and Wingify-branded (`wingify-*`) SDK packages. When checking for updates, it will attempt to fetch version information from both package variants and use the first successful response.
 
 ### Usage
 
@@ -45,6 +49,53 @@ jobs:
         env:
           SLACK_NOTIFICATIONS_BOT_TOKEN: ${{ secrets.SLACK_NOTIFICATIONS_BOT_TOKEN }}
           CHANNEL_ID: ${{ secrets.CHANNEL_ID }}
+```
+
+### Package Detection Examples
+
+The action will automatically detect and check versions for both VWO and Wingify branded packages:
+
+**Node.js** (`package.json`):
+```json
+{
+  "dependencies": {
+    "vwo-fme-node-sdk": "^1.2.0"
+  }
+}
+```
+or
+```json
+{
+  "dependencies": {
+    "wingify-fme-node-sdk": "^1.2.0"
+  }
+}
+```
+
+**PHP** (`composer.json`):
+```json
+{
+  "require": {
+    "vwo/vwo-fme-php-sdk": "^1.0.0"
+  }
+}
+```
+or
+```json
+{
+  "require": {
+    "wingify/wingify-fme-php-sdk": "^1.0.0"
+  }
+}
+```
+
+**Python** (`requirements.txt`):
+```
+vwo-fme-python-sdk==1.2.3
+```
+or
+```
+wingify-fme-python-sdk==1.2.3
 ```
 
 ### Environment variables
