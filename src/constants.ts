@@ -34,14 +34,14 @@ export type Lang = (typeof LANG)[keyof typeof LANG];
 
 /** Package / artifact names as they appear in each ecosystem. */
 export const SDK_PACKAGE = {
-  NODE: "vwo-fme-node-sdk",
-  JAVA: "vwo-fme-java-sdk",
-  PHP: "vwo/vwo-fme-php-sdk",
+  NODE: ["vwo-fme-node-sdk", "wingify-fme-node-sdk"],
+  JAVA: ["vwo-fme-java-sdk", "wingify-fme-java-sdk"],
+  PHP: ["vwo/vwo-fme-php-sdk", "wingify/wingify-fme-php-sdk"],
   /** Short module name matched inside `go.mod` require lines. */
-  GO: "vwo-fme-go-sdk",
-  RUBY: "vwo-fme-ruby-sdk",
-  DOTNET: "VWO.FME.Sdk",
-  PYTHON: "vwo-fme-python-sdk",
+  GO: ["vwo-fme-go-sdk", "wingify-fme-go-sdk"],
+  RUBY: ["vwo-fme-ruby-sdk", "wingify-fme-ruby-sdk"],
+  DOTNET: ["VWO.FME.Sdk", "Wingify.FME.Sdk"],
+  PYTHON: ["vwo-fme-python-sdk", "wingify-fme-python-sdk"],
 } as const;
 
 /** Human-readable labels used in Slack outdated-SDK messages. */
@@ -87,13 +87,34 @@ export const SCAN_IGNORE: string[] = [
 
 /** Registry endpoints that expose the latest published SDK version. */
 export const REGISTRY_URL = {
-  NODE: `https://registry.npmjs.org/${SDK_PACKAGE.NODE}/latest`,
-  RUBY: `https://rubygems.org/api/v1/gems/${SDK_PACKAGE.RUBY}.json`,
-  PHP: `https://repo.packagist.org/p2/${SDK_PACKAGE.PHP}.json`,
-  JAVA: `https://repo1.maven.org/maven2/com/vwo/sdk/${SDK_PACKAGE.JAVA}/maven-metadata.xml`,
-  GO: "https://proxy.golang.org/github.com/wingify/vwo-fme-go-sdk/@latest",
-  DOTNET: "https://api.nuget.org/v3-flatcontainer/vwo.fme.sdk/index.json",
-  PYTHON: `https://pypi.org/pypi/${SDK_PACKAGE.PYTHON}/json`,
+  NODE: [
+    `https://registry.npmjs.org/${SDK_PACKAGE.NODE[0]}/latest`,
+    `https://registry.npmjs.org/${SDK_PACKAGE.NODE[1]}/latest`
+  ],
+  RUBY: [
+    `https://rubygems.org/api/v1/gems/${SDK_PACKAGE.RUBY[0]}.json`,
+    `https://rubygems.org/api/v1/gems/${SDK_PACKAGE.RUBY[1]}.json`
+  ],
+  PHP: [
+    `https://repo.packagist.org/p2/${SDK_PACKAGE.PHP[0]}.json`,
+    `https://repo.packagist.org/p2/${SDK_PACKAGE.PHP[1]}.json`
+  ],
+  JAVA: [
+    `https://repo1.maven.org/maven2/com/vwo/sdk/${SDK_PACKAGE.JAVA[0]}/maven-metadata.xml`,
+    `https://repo1.maven.org/maven2/com/wingify/sdk/${SDK_PACKAGE.JAVA[1]}/maven-metadata.xml`
+  ],
+  GO: [
+    "https://proxy.golang.org/github.com/wingify/vwo-fme-go-sdk/@latest",
+    "https://proxy.golang.org/github.com/wingify/wingify-fme-go-sdk/@latest"
+  ],
+  DOTNET: [
+    "https://api.nuget.org/v3-flatcontainer/vwo.fme.sdk/index.json",
+    "https://api.nuget.org/v3-flatcontainer/wingify.fme.sdk/index.json"
+  ],
+  PYTHON: [
+    `https://pypi.org/pypi/${SDK_PACKAGE.PYTHON[0]}/json`,
+    `https://pypi.org/pypi/${SDK_PACKAGE.PYTHON[1]}/json`
+  ],
 } as const;
 
 /** Timeout applied only to the Go module proxy request. */
@@ -115,8 +136,8 @@ export const DEFAULT_GITHUB_SERVER_URL = "https://github.com";
 export const FALLBACK_REPO_DISPLAY_NAME = "this repository";
 
 /**
- * Matches a `vwo-fme-python-sdk` / `vwo_fme_python_sdk` requirement line,
+ * Matches a `vwo-fme-python-sdk` / `vwo_fme_python_sdk` or `wingify-fme-python-sdk` / `wingify_fme_python_sdk` requirement line,
  * including optional extras such as `vwo-fme-python-sdk[dev]`.
  */
 export const PYTHON_REQUIREMENT_NAME_RE =
-  /^vwo[-_]fme[-_]python[-_]sdk(?!-)(?:\[[^\]]*\])?/i;
+  /^(?:vwo|wingify)[-_]fme[-_]python[-_]sdk(?!-)(?:\[[^\]]*\])?/i;
