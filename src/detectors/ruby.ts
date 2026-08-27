@@ -25,23 +25,33 @@ import {
 import { LANG, SDK_LABEL, SDK_PACKAGE } from "../constants";
 
 /**
- * Inspect a `Gemfile` and, if `vwo-fme-ruby-sdk` is declared,
+ * Inspect a `Gemfile` and, if `vwo-fme-ruby-sdk` or `wingify-fme-ruby-sdk` is declared,
  * compare the Ruby-style version constraint against the latest
  * RubyGems release.
  */
 async function detectRuby(file: string): Promise<void> {
   const gemfile = fs.readFileSync(file, "utf8");
 
-  const gemPattern = new RegExp(
-    String.raw`gem\s+['"]` +
-      SDK_PACKAGE.RUBY +
-      String.raw`['"][^'\n"]*['"]([^'"]+)['"]`,
-  );
-  const match = gemfile.match(gemPattern);
+  // Check for both vwo and wingify packages
+  let versionSpec: string | undefined;
+  let packageName: string | undefined;
 
-  if (!match) return;
+  for (const packageName_ of SDK_PACKAGE.RUBY) {
+    const gemPattern = new RegExp(
+      String.raw`gem\s+['"]` +
+        packageName_ +
+        String.raw`['"][^'\n"]*['"]([^'"]+)['"]`,
+    );
+    const match = gemfile.match(gemPattern);
 
-  const versionSpec = match[1].trim();
+    if (match) {
+      packageName = packageName_;
+      versionSpec = match[1].trim();
+      break;
+    }
+  }
+
+  if (!versionSpec || !packageName) return;
 
   const latest = await fetchLatest(LANG.RUBY);
   if (!latest) {

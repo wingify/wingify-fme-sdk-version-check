@@ -41,68 +41,130 @@ import {
 async function fetchLatest(lang: Lang): Promise<string | null> {
   try {
     if (lang === LANG.NODE) {
-      const res = await axios.get(REGISTRY_URL.NODE);
-      return res.data.version as string;
+      // Try both vwo and wingify packages
+      for (const url of REGISTRY_URL.NODE) {
+        try {
+          const res = await axios.get(url);
+          return res.data.version as string;
+        } catch (err) {
+          // Continue to next URL if this one fails
+          continue;
+        }
+      }
+      return null;
     }
 
     if (lang === LANG.RUBY) {
-      const res = await axios.get(REGISTRY_URL.RUBY);
-      return res.data.version as string;
+      // Try both vwo and wingify packages
+      for (const url of REGISTRY_URL.RUBY) {
+        try {
+          const res = await axios.get(url);
+          return res.data.version as string;
+        } catch (err) {
+          // Continue to next URL if this one fails
+          continue;
+        }
+      }
+      return null;
     }
 
     if (lang === LANG.PHP) {
-      const res = await axios.get(REGISTRY_URL.PHP);
-      const packages = res.data.packages?.[SDK_PACKAGE.PHP];
-      if (Array.isArray(packages) && packages.length > 0) {
-        // Packagist p2 responses list versions newest-first.
-        return packages[0].version as string;
+      // Try both vwo and wingify packages
+      for (let i = 0; i < REGISTRY_URL.PHP.length; i++) {
+        try {
+          const res = await axios.get(REGISTRY_URL.PHP[i]);
+          const packages = res.data.packages?.[SDK_PACKAGE.PHP[i]];
+          if (Array.isArray(packages) && packages.length > 0) {
+            // Packagist p2 responses list versions newest-first.
+            return packages[0].version as string;
+          }
+        } catch (err) {
+          // Continue to next URL if this one fails
+          continue;
+        }
       }
       return null;
     }
 
     if (lang === LANG.JAVA) {
-      const res = await axios.get(REGISTRY_URL.JAVA, { responseType: "text" });
+      // Try both vwo and wingify packages
+      for (const url of REGISTRY_URL.JAVA) {
+        try {
+          const res = await axios.get(url, { responseType: "text" });
+          
+          const xml = String(res.data);
+          const release = xml.match(/<release>\s*([^<\s]+)\s*<\/release>/)?.[1];
+          const latest = xml.match(/<latest>\s*([^<\s]+)\s*<\/latest>/)?.[1];
 
-      const xml = String(res.data);
-      const release = xml.match(/<release>\s*([^<\s]+)\s*<\/release>/)?.[1];
-      const latest = xml.match(/<latest>\s*([^<\s]+)\s*<\/latest>/)?.[1];
-
-      // Prefer `<release>` (last non-snapshot) over `<latest>`.
-      return (release || latest || null) as string | null;
+          // Prefer `<release>` (last non-snapshot) over `<latest>`.
+          const version = (release || latest || null) as string | null;
+          if (version) return version;
+        } catch (err) {
+          // Continue to next URL if this one fails
+          continue;
+        }
+      }
+      return null;
     }
 
     if (lang === LANG.GO) {
-      const res = await axios.get(REGISTRY_URL.GO, {
-        timeout: GO_PROXY_TIMEOUT_MS,
-      });
-      return (res.data.Version as string) || null;
+      // Try both vwo and wingify packages
+      for (const url of REGISTRY_URL.GO) {
+        try {
+          const res = await axios.get(url, {
+            timeout: GO_PROXY_TIMEOUT_MS,
+          });
+          return (res.data.Version as string) || null;
+        } catch (err) {
+          // Continue to next URL if this one fails
+          continue;
+        }
+      }
+      return null;
     }
 
     if (lang === LANG.DOTNET) {
-      const res = await axios.get(REGISTRY_URL.DOTNET);
-      const versions = res.data?.versions as string[] | undefined;
-      if (Array.isArray(versions) && versions.length > 0) {
-        // NuGet's flat-container index lists versions in ascending order.
-        return versions[versions.length - 1];
+      // Try both vwo and wingify packages
+      for (const url of REGISTRY_URL.DOTNET) {
+        try {
+          const res = await axios.get(url);
+          const versions = res.data?.versions as string[] | undefined;
+          if (Array.isArray(versions) && versions.length > 0) {
+            // NuGet's flat-container index lists versions in ascending order.
+            return versions[versions.length - 1];
+          }
+        } catch (err) {
+          // Continue to next URL if this one fails
+          continue;
+        }
       }
       return null;
     }
 
     if (lang === LANG.PYTHON) {
-      const res = await axios.get(REGISTRY_URL.PYTHON);
-      const releases = res.data?.releases as
-        Record<string, unknown> | undefined;
-      if (!releases || typeof releases !== "object") return null;
+      // Try both vwo and wingify packages
+      for (const url of REGISTRY_URL.PYTHON) {
+        try {
+          const res = await axios.get(url);
+          const releases = res.data?.releases as
+            Record<string, unknown> | undefined;
+          if (!releases || typeof releases !== "object") continue;
 
-      // Pick the highest coercible semver key rather than trusting `info.version`,
-      // which can lag behind the releases map for some packages.
-      const highestKey =
-        Object.keys(releases)
-          .filter((k) => semver.coerce(k))
-          .sort((a, b) => semver.compare(semver.coerce(a)!, semver.coerce(b)!))
-          .pop() ?? null;
+          // Pick the highest coercible semver key rather than trusting `info.version`,
+          // which can lag behind the releases map for some packages.
+          const highestKey =
+            Object.keys(releases)
+              .filter((k) => semver.coerce(k))
+              .sort((a, b) => semver.compare(semver.coerce(a)!, semver.coerce(b)!))
+              .pop() ?? null;
 
-      return highestKey;
+          if (highestKey) return highestKey;
+        } catch (err) {
+          // Continue to next URL if this one fails
+          continue;
+        }
+      }
+      return null;
     }
 
     return null;

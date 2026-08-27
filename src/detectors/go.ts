@@ -33,11 +33,22 @@ async function detectGo(file: string): Promise<void> {
   try {
     const gomod = fs.readFileSync(file, "utf8");
 
-    const lineMatch = gomod
-      .split("\n")
-      .find((line: string) => line.includes(SDK_PACKAGE.GO));
+    // Check for both vwo and wingify packages
+    let lineMatch: string | undefined;
+    let packageName: string | undefined;
 
-    if (!lineMatch) {
+    for (const packageName_ of SDK_PACKAGE.GO) {
+      lineMatch = gomod
+        .split("\n")
+        .find((line: string) => line.includes(packageName_));
+      
+      if (lineMatch) {
+        packageName = packageName_;
+        break;
+      }
+    }
+
+    if (!lineMatch || !packageName) {
       console.log(`Go SDK not found in ${file}`);
       return;
     }

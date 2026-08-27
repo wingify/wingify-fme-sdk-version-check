@@ -53,7 +53,7 @@ function composerTildeToRange(spec: string): string {
 }
 
 /**
- * Inspect a `composer.json` file and, if `vwo/vwo-fme-php-sdk` is present
+ * Inspect a `composer.json` file and, if `vwo/vwo-fme-php-sdk` or `wingify/wingify-fme-php-sdk` is present
  * in either `require` or `require-dev`, compare its constraint against
  * the latest Packagist version.
  */
@@ -67,10 +67,21 @@ async function detectPhp(file: string): Promise<void> {
   const requireDeps = json.require || {};
   const requireDevDeps = json["require-dev"] || {};
 
-  const versionSpecRaw =
-    requireDeps[SDK_PACKAGE.PHP] || requireDevDeps[SDK_PACKAGE.PHP];
+  // Check for both vwo and wingify packages
+  let versionSpecRaw: string | undefined;
+  let packageName: string | undefined;
 
-  if (!versionSpecRaw) return;
+  for (const packageName_ of SDK_PACKAGE.PHP) {
+    versionSpecRaw =
+      requireDeps[packageName_] || requireDevDeps[packageName_];
+    
+    if (versionSpecRaw) {
+      packageName = packageName_;
+      break;
+    }
+  }
+
+  if (!versionSpecRaw || !packageName) return;
 
   // Normalize Composer `~` so comparison uses Composer semantics
   // (e.g. "~1.5" -> ">=1.5.0 <2.0.0") rather than npm's `~`.

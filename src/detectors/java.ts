@@ -25,23 +25,35 @@ import {
 import { LANG, SDK_LABEL, SDK_PACKAGE } from "../constants";
 
 /**
- * Inspect a `pom.xml` and, if the `vwo-fme-java-sdk` dependency is present,
+ * Inspect a `pom.xml` and, if the `vwo-fme-java-sdk` or `wingify-fme-java-sdk` dependency is present,
  * compare its version (or range) with the latest version reported by
  * Maven Central metadata.
  */
 async function detectJava(file: string): Promise<void> {
   const xml = fs.readFileSync(file, "utf8");
 
-  const artifactTag = `<artifactId>${SDK_PACKAGE.JAVA}</artifactId>`;
-  const depIndex = xml.indexOf(artifactTag);
-  if (depIndex === -1) return;
+  // Check for both vwo and wingify packages
+  let versionSpec: string | undefined;
+  let packageName: string | undefined;
 
-  // Version is expected after the matching `<artifactId>` in the same dependency block.
-  const after = xml.slice(depIndex);
-  const versionMatch = after.match(/<version>\s*([^<]+)\s*<\/version>/);
-  if (!versionMatch) return;
+  for (const packageName_ of SDK_PACKAGE.JAVA) {
+    const artifactTag = `<artifactId>${packageName_}</artifactId>`;
+    const depIndex = xml.indexOf(artifactTag);
+    
+    if (depIndex !== -1) {
+      packageName = packageName_;
+      // Version is expected after the matching `<artifactId>` in the same dependency block.
+      const after = xml.slice(depIndex);
+      const versionMatch = after.match(/<version>\s*([^<]+)\s*<\/version>/);
+      
+      if (versionMatch) {
+        versionSpec = versionMatch[1].trim();
+        break;
+      }
+    }
+  }
 
-  const versionSpec = versionMatch[1].trim();
+  if (!versionSpec || !packageName) return;
 
   const latest = await fetchLatest(LANG.JAVA);
   if (!latest) {

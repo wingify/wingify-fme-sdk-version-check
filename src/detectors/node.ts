@@ -25,7 +25,7 @@ import {
 import { LANG, SDK_LABEL, SDK_PACKAGE } from "../constants";
 
 /**
- * Inspect a `package.json` file and, if `vwo-fme-node-sdk` is present,
+ * Inspect a `package.json` file and, if `vwo-fme-node-sdk` or `wingify-fme-node-sdk` is present,
  * compare the declared version/range against the latest npm release.
  */
 async function detectNode(file: string): Promise<void> {
@@ -35,11 +35,22 @@ async function detectNode(file: string): Promise<void> {
     devDependencies?: Record<string, string>;
   };
 
-  const versionSpec =
-    pkg.dependencies?.[SDK_PACKAGE.NODE] ||
-    pkg.devDependencies?.[SDK_PACKAGE.NODE];
+  // Check for both vwo and wingify packages
+  let versionSpec: string | undefined;
+  let packageName: string | undefined;
 
-  if (!versionSpec) return;
+  for (const packageName_ of SDK_PACKAGE.NODE) {
+    versionSpec =
+      pkg.dependencies?.[packageName_] ||
+      pkg.devDependencies?.[packageName_];
+    
+    if (versionSpec) {
+      packageName = packageName_;
+      break;
+    }
+  }
+
+  if (!versionSpec || !packageName) return;
 
   const latest = await fetchLatest(LANG.NODE);
   if (!latest) {
