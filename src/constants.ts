@@ -28,6 +28,7 @@ export const LANG = {
   GO: "go",
   DOTNET: "dotnet",
   PYTHON: "python",
+  ANDROID: "android",
 } as const;
 
 export type Lang = (typeof LANG)[keyof typeof LANG];
@@ -42,7 +43,14 @@ export const SDK_PACKAGE = {
   RUBY: ["vwo-fme-ruby-sdk", "wingify-fme-ruby-sdk"],
   DOTNET: ["VWO.FME.Sdk", "Wingify.FME.Sdk"],
   PYTHON: ["vwo-fme-python-sdk", "wingify-fme-python-sdk"],
+  ANDROID: ["vwo-fme-android-sdk", "wingify-fme-android-sdk"],
 } as const;
+
+/** Maven coordinates for the Android SDK artifacts on Maven Central. */
+export const ANDROID_MAVEN_COORDS = [
+  { group: "com.vwo.sdk", artifact: SDK_PACKAGE.ANDROID[0] },
+  { group: "com.wingify.sdk", artifact: SDK_PACKAGE.ANDROID[1] },
+] as const;
 
 /** Human-readable labels used in Slack outdated-SDK messages. */
 export const SDK_LABEL = {
@@ -53,6 +61,7 @@ export const SDK_LABEL = {
   RUBY: "Ruby",
   DOTNET: "DotNet",
   PYTHON: "Python",
+  ANDROID: "Android",
 } as const;
 
 /** Manifest file names / suffixes discovered by the scanner. */
@@ -64,6 +73,9 @@ export const MANIFEST = {
   GEMFILE: "Gemfile",
   CSPROJ: ".csproj",
   REQUIREMENTS_TXT: "requirements.txt",
+  BUILD_GRADLE: "build.gradle",
+  BUILD_GRADLE_KTS: "build.gradle.kts",
+  LIBS_VERSIONS_TOML: "libs.versions.toml",
 } as const;
 
 /** Glob patterns used to locate manifests across the repository. */
@@ -75,6 +87,9 @@ export const MANIFEST_GLOBS: string[] = [
   `**/${MANIFEST.GEMFILE}`,
   `**/*${MANIFEST.CSPROJ}`,
   `**/${MANIFEST.REQUIREMENTS_TXT}`,
+  `**/${MANIFEST.BUILD_GRADLE_KTS}`,
+  `**/${MANIFEST.BUILD_GRADLE}`,
+  `**/${MANIFEST.LIBS_VERSIONS_TOML}`,
 ];
 
 /** Directories skipped while scanning for manifests. */
@@ -114,6 +129,10 @@ export const REGISTRY_URL = {
   PYTHON: [
     `https://pypi.org/pypi/${SDK_PACKAGE.PYTHON[0]}/json`,
     `https://pypi.org/pypi/${SDK_PACKAGE.PYTHON[1]}/json`
+  ],
+  ANDROID: [
+    `https://repo1.maven.org/maven2/com/vwo/sdk/${SDK_PACKAGE.ANDROID[0]}/maven-metadata.xml`,
+    `https://repo1.maven.org/maven2/com/wingify/sdk/${SDK_PACKAGE.ANDROID[1]}/maven-metadata.xml`,
   ],
 } as const;
 

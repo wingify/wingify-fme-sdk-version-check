@@ -22,6 +22,7 @@ import detectGo from "./detectors/go";
 import detectRuby from "./detectors/ruby";
 import detectDotnet from "./detectors/dotnet";
 import detectPython from "./detectors/python";
+import detectAndroid from "./detectors/android";
 import { ENV, MANIFEST } from "./constants";
 
 /**
@@ -67,6 +68,16 @@ async function run(): Promise<void> {
 
     if (file.endsWith(MANIFEST.REQUIREMENTS_TXT)) {
       await detectPython(file);
+    }
+
+    if (file.endsWith(MANIFEST.BUILD_GRADLE_KTS)) {
+      await detectAndroid(file);
+    } else if (file.endsWith(MANIFEST.BUILD_GRADLE)) {
+      await detectAndroid(file);
+    }
+
+    if (file.endsWith(MANIFEST.LIBS_VERSIONS_TOML)) {
+      await detectAndroid(file);
     }
   }
 }

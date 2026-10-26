@@ -13,13 +13,14 @@ The action supports both VWO and Wingify branded SDK packages:
 - **Ruby**: `vwo-fme-ruby-sdk`, `wingify-fme-ruby-sdk`
 - **.NET**: `VWO.FME.Sdk`, `Wingify.FME.Sdk`
 - **Python**: `vwo-fme-python-sdk`, `wingify-fme-python-sdk`
+- **Android**: `com.vwo.sdk:vwo-fme-android-sdk`, `com.wingify.sdk:wingify-fme-android-sdk`
 
 ### How it works
 
 - **Scans** the repository for common manifest files:
-  - `package.json`, `pom.xml`, `composer.json`, `go.mod`, `Gemfile`, `*.csproj`, `requirements.txt`
+  - `package.json`, `pom.xml`, `composer.json`, `go.mod`, `Gemfile`, `*.csproj`, `requirements.txt`, `build.gradle`, `build.gradle.kts`, `libs.versions.toml`
 - **Detects** whether any of the supported Wingify SDKs (both VWO and Wingify branded) are declared.
-- **Fetches** the latest version of each SDK from the matching package registry (npm, Maven Central, Packagist, Go module proxy, RubyGems, NuGet, PyPI).
+- **Fetches** the latest version of each SDK from the matching package registry (npm, Maven Central, Packagist, Go module proxy, RubyGems, NuGet, PyPI). Android artifacts are resolved from Maven Central metadata.
 - **Compares** the current version or version range in the repo with the latest release.
 - **Logs** whether each detected SDK is up to date or outdated.
 - **Notifies** Slack when an SDK is outdated (optional; see environment variables below).
@@ -96,6 +97,16 @@ vwo-fme-python-sdk==1.2.3
 or
 ```
 wingify-fme-python-sdk==1.2.3
+```
+
+**Android** (`build.gradle` / `build.gradle.kts`):
+```gradle
+implementation "com.vwo.sdk:vwo-fme-android-sdk:1.75.0"
+```
+or Kotlin DSL / version catalog (`gradle/libs.versions.toml`):
+```toml
+[libraries]
+wingify-fme = { module = "com.wingify.sdk:wingify-fme-android-sdk", version = "1.80.0" }
 ```
 
 ### Environment variables

@@ -35,6 +35,7 @@ import {
  * - go     -> Go module proxy
  * - dotnet -> NuGet
  * - python -> PyPI
+ * - android -> Maven Central (AAR artifacts)
  *
  * Returns `null` when the SDK is unknown or the registry query fails.
  */
@@ -135,6 +136,22 @@ async function fetchLatest(lang: Lang): Promise<string | null> {
           }
         } catch (err) {
           // Continue to next URL if this one fails
+          continue;
+        }
+      }
+      return null;
+    }
+
+    if (lang === LANG.ANDROID) {
+      for (const url of REGISTRY_URL.ANDROID) {
+        try {
+          const res = await axios.get(url, { responseType: "text" });
+          const xml = String(res.data);
+          const release = xml.match(/<release>\s*([^<\s]+)\s*<\/release>/)?.[1];
+          const latest = xml.match(/<latest>\s*([^<\s]+)\s*<\/latest>/)?.[1];
+          const version = (release || latest || null) as string | null;
+          if (version) return version;
+        } catch {
           continue;
         }
       }
