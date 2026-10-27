@@ -31,6 +31,7 @@ export const LANG = {
   ANDROID: "android",
   IOS: "ios",
   REACT_NATIVE: "react-native",
+  REACT: "react",
   FLUTTER: "flutter",
 } as const;
 
@@ -51,6 +52,7 @@ export const SDK_PACKAGE = {
   IOS: ["VWO-FME", "Wingify-FME"],
   /** npm package names for the React Native SDK. */
   REACT_NATIVE: ["vwo-fme-react-native-sdk", "wingify-fme-react-native-sdk"],
+  REACT: ["vwo-fme-react-sdk", "wingify-fme-react-sdk"],
   /** pub.dev package names for the Flutter SDK. */
   FLUTTER: ["vwo_fme_flutter_sdk", "wingify_fme_flutter_sdk"],
 } as const;
@@ -83,6 +85,7 @@ export const SDK_LABEL = {
   ANDROID: "Android",
   IOS: "iOS",
   REACT_NATIVE: "React Native",
+  REACT: "React",
   FLUTTER: "Flutter",
 } as const;
 
@@ -176,6 +179,10 @@ export const REGISTRY_URL = {
   REACT_NATIVE: [
     `https://registry.npmjs.org/${SDK_PACKAGE.REACT_NATIVE[0]}/latest`,
     `https://registry.npmjs.org/${SDK_PACKAGE.REACT_NATIVE[1]}/latest`,
+  ],
+  REACT: [
+    `https://registry.npmjs.org/${SDK_PACKAGE.REACT[0]}/latest`,
+    `https://registry.npmjs.org/${SDK_PACKAGE.REACT[1]}/latest`,
   ],
   FLUTTER: [
     `https://pub.dev/api/packages/${SDK_PACKAGE.FLUTTER[0]}`,

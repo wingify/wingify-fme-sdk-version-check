@@ -25,6 +25,7 @@ import detectPython from "./detectors/python";
 import detectAndroid from "./detectors/android";
 import detectIos from "./detectors/ios";
 import detectReactNative from "./detectors/reactNative";
+import detectReact from "./detectors/react";
 import detectFlutter from "./detectors/flutter";
 import { ENV, MANIFEST } from "./constants";
 
@@ -48,6 +49,7 @@ async function run(): Promise<void> {
     if (file.endsWith(MANIFEST.PACKAGE_JSON)) {
       await detectNode(file);
       await detectReactNative(file);
+      await detectReact(file);
     }
 
     if (file.endsWith(MANIFEST.POM_XML)) {

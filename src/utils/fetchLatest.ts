@@ -38,7 +38,8 @@ import {
  * - android -> Maven Central (AAR artifacts)
  * - ios     -> CocoaPods trunk API (VWO-FME / Wingify-FME)
  * - react-native -> npm (vwo-fme-react-native-sdk / wingify-fme-react-native-sdk)
- * - flutter    -> pub.dev (vwo_fme_flutter_sdk / wingify_fme_flutter_sdk)
+ * - react        -> npm (vwo-fme-react-sdk / wingify-fme-react-sdk)
+ * - flutter      -> pub.dev (vwo_fme_flutter_sdk / wingify_fme_flutter_sdk)
  *
  * Returns `null` when the SDK is unknown or the registry query fails.
  */
@@ -95,7 +96,7 @@ async function fetchLatest(lang: Lang): Promise<string | null> {
       for (const url of REGISTRY_URL.JAVA) {
         try {
           const res = await axios.get(url, { responseType: "text" });
-          
+
           const xml = String(res.data);
           const release = xml.match(/<release>\s*([^<\s]+)\s*<\/release>/)?.[1];
           const latest = xml.match(/<latest>\s*([^<\s]+)\s*<\/latest>/)?.[1];
@@ -205,7 +206,9 @@ async function fetchLatest(lang: Lang): Promise<string | null> {
           const highestKey =
             Object.keys(releases)
               .filter((k) => semver.coerce(k))
-              .sort((a, b) => semver.compare(semver.coerce(a)!, semver.coerce(b)!))
+              .sort((a, b) =>
+                semver.compare(semver.coerce(a)!, semver.coerce(b)!),
+              )
               .pop() ?? null;
 
           if (highestKey) return highestKey;
@@ -215,6 +218,27 @@ async function fetchLatest(lang: Lang): Promise<string | null> {
         }
       }
       return null;
+    }
+
+    if (lang === LANG.REACT) {
+      const candidates: string[] = [];
+      for (const url of REGISTRY_URL.REACT) {
+        try {
+          const res = await axios.get(url);
+          const version = res.data?.version as string | undefined;
+          if (version && semver.coerce(version)) {
+            candidates.push(version);
+          }
+        } catch {
+          continue;
+        }
+      }
+
+      if (candidates.length === 0) return null;
+
+      return candidates.sort((a, b) =>
+        semver.compare(semver.coerce(a)!, semver.coerce(b)!),
+      )[candidates.length - 1];
     }
 
     if (lang === LANG.FLUTTER) {
