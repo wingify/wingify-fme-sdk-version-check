@@ -23,6 +23,7 @@ import detectRuby from "./detectors/ruby";
 import detectDotnet from "./detectors/dotnet";
 import detectPython from "./detectors/python";
 import detectAndroid from "./detectors/android";
+import detectIos from "./detectors/ios";
 import { ENV, MANIFEST } from "./constants";
 
 /**
@@ -78,6 +79,16 @@ async function run(): Promise<void> {
 
     if (file.endsWith(MANIFEST.LIBS_VERSIONS_TOML)) {
       await detectAndroid(file);
+    }
+
+    if (
+      file.endsWith(`/${MANIFEST.PODFILE}`) ||
+      file.endsWith(`/${MANIFEST.PODFILE_LOCK}`) ||
+      file.endsWith(`/${MANIFEST.PACKAGE_SWIFT}`) ||
+      file.endsWith(`/${MANIFEST.PACKAGE_RESOLVED}`) ||
+      file.endsWith(`/${MANIFEST.PBXPROJ}`)
+    ) {
+      await detectIos(file);
     }
   }
 }

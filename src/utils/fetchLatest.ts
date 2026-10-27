@@ -36,6 +36,7 @@ import {
  * - dotnet -> NuGet
  * - python -> PyPI
  * - android -> Maven Central (AAR artifacts)
+ * - ios     -> CocoaPods trunk API (VWO-FME / Wingify-FME)
  *
  * Returns `null` when the SDK is unknown or the registry query fails.
  */
@@ -156,6 +157,36 @@ async function fetchLatest(lang: Lang): Promise<string | null> {
         }
       }
       return null;
+    }
+
+    if (lang === LANG.IOS) {
+      const candidates: string[] = [];
+      for (const url of REGISTRY_URL.IOS) {
+        try {
+          const res = await axios.get(url);
+          const versions = res.data?.versions as { name: string }[] | undefined;
+          if (!Array.isArray(versions) || versions.length === 0) continue;
+
+          const highest =
+            versions
+              .map((v) => v.name)
+              .filter((name) => semver.coerce(name))
+              .sort((a, b) =>
+                semver.compare(semver.coerce(a)!, semver.coerce(b)!),
+              )
+              .pop() ?? null;
+
+          if (highest) candidates.push(highest);
+        } catch {
+          continue;
+        }
+      }
+
+      if (candidates.length === 0) return null;
+
+      return candidates.sort((a, b) =>
+        semver.compare(semver.coerce(a)!, semver.coerce(b)!),
+      )[candidates.length - 1];
     }
 
     if (lang === LANG.PYTHON) {

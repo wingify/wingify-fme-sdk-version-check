@@ -29,6 +29,7 @@ export const LANG = {
   DOTNET: "dotnet",
   PYTHON: "python",
   ANDROID: "android",
+  IOS: "ios",
 } as const;
 
 export type Lang = (typeof LANG)[keyof typeof LANG];
@@ -44,7 +45,19 @@ export const SDK_PACKAGE = {
   DOTNET: ["VWO.FME.Sdk", "Wingify.FME.Sdk"],
   PYTHON: ["vwo-fme-python-sdk", "wingify-fme-python-sdk"],
   ANDROID: ["vwo-fme-android-sdk", "wingify-fme-android-sdk"],
+  /** CocoaPods pod names for the iOS SDK. */
+  IOS: ["VWO-FME", "Wingify-FME"],
 } as const;
+
+/** Swift Package Manager repository URLs for the iOS SDK. */
+export const IOS_SPM_REPO_URLS = [
+  "https://github.com/wingify/vwo-fme-ios-sdk",
+  "https://github.com/wingify/wingify-fme-ios-sdk",
+] as const;
+
+/** Matches Wingify FME iOS SPM repository URLs in manifests. */
+export const IOS_SPM_REPO_URL_RE =
+  /github\.com\/wingify\/(?:vwo|wingify)-fme-ios-sdk/i;
 
 /** Maven coordinates for the Android SDK artifacts on Maven Central. */
 export const ANDROID_MAVEN_COORDS = [
@@ -62,6 +75,7 @@ export const SDK_LABEL = {
   DOTNET: "DotNet",
   PYTHON: "Python",
   ANDROID: "Android",
+  IOS: "iOS",
 } as const;
 
 /** Manifest file names / suffixes discovered by the scanner. */
@@ -76,6 +90,11 @@ export const MANIFEST = {
   BUILD_GRADLE: "build.gradle",
   BUILD_GRADLE_KTS: "build.gradle.kts",
   LIBS_VERSIONS_TOML: "libs.versions.toml",
+  PODFILE: "Podfile",
+  PODFILE_LOCK: "Podfile.lock",
+  PACKAGE_SWIFT: "Package.swift",
+  PACKAGE_RESOLVED: "Package.resolved",
+  PBXPROJ: "project.pbxproj",
 } as const;
 
 /** Glob patterns used to locate manifests across the repository. */
@@ -90,6 +109,12 @@ export const MANIFEST_GLOBS: string[] = [
   `**/${MANIFEST.BUILD_GRADLE_KTS}`,
   `**/${MANIFEST.BUILD_GRADLE}`,
   `**/${MANIFEST.LIBS_VERSIONS_TOML}`,
+  `**/${MANIFEST.PODFILE}`,
+  `**/${MANIFEST.PODFILE_LOCK}`,
+  `**/${MANIFEST.PACKAGE_SWIFT}`,
+  `**/${MANIFEST.PACKAGE_RESOLVED}`,
+  `**/*/*.xcodeproj/${MANIFEST.PBXPROJ}`,
+  `**/*.xcodeproj/${MANIFEST.PBXPROJ}`,
 ];
 
 /** Directories skipped while scanning for manifests. */
@@ -133,6 +158,10 @@ export const REGISTRY_URL = {
   ANDROID: [
     `https://repo1.maven.org/maven2/com/vwo/sdk/${SDK_PACKAGE.ANDROID[0]}/maven-metadata.xml`,
     `https://repo1.maven.org/maven2/com/wingify/sdk/${SDK_PACKAGE.ANDROID[1]}/maven-metadata.xml`,
+  ],
+  IOS: [
+    `https://trunk.cocoapods.org/api/v1/pods/${SDK_PACKAGE.IOS[0]}`,
+    `https://trunk.cocoapods.org/api/v1/pods/${SDK_PACKAGE.IOS[1]}`,
   ],
 } as const;
 

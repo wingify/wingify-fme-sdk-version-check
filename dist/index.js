@@ -20670,7 +20670,7 @@ module.exports = require("zlib");
  * limitations under the License.
  */
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.PYTHON_REQUIREMENT_NAME_RE = exports.FALLBACK_REPO_DISPLAY_NAME = exports.DEFAULT_GITHUB_SERVER_URL = exports.ENV = exports.GO_PROXY_TIMEOUT_MS = exports.REGISTRY_URL = exports.SCAN_IGNORE = exports.MANIFEST_GLOBS = exports.MANIFEST = exports.SDK_LABEL = exports.ANDROID_MAVEN_COORDS = exports.SDK_PACKAGE = exports.LANG = void 0;
+exports.PYTHON_REQUIREMENT_NAME_RE = exports.FALLBACK_REPO_DISPLAY_NAME = exports.DEFAULT_GITHUB_SERVER_URL = exports.ENV = exports.GO_PROXY_TIMEOUT_MS = exports.REGISTRY_URL = exports.SCAN_IGNORE = exports.MANIFEST_GLOBS = exports.MANIFEST = exports.SDK_LABEL = exports.ANDROID_MAVEN_COORDS = exports.IOS_SPM_REPO_URL_RE = exports.IOS_SPM_REPO_URLS = exports.SDK_PACKAGE = exports.LANG = void 0;
 /**
  * Shared identifiers, package names, registry URLs, and environment
  * variable names used across detectors and utilities.
@@ -20685,6 +20685,7 @@ exports.LANG = {
     DOTNET: "dotnet",
     PYTHON: "python",
     ANDROID: "android",
+    IOS: "ios",
 };
 /** Package / artifact names as they appear in each ecosystem. */
 exports.SDK_PACKAGE = {
@@ -20697,7 +20698,16 @@ exports.SDK_PACKAGE = {
     DOTNET: ["VWO.FME.Sdk", "Wingify.FME.Sdk"],
     PYTHON: ["vwo-fme-python-sdk", "wingify-fme-python-sdk"],
     ANDROID: ["vwo-fme-android-sdk", "wingify-fme-android-sdk"],
+    /** CocoaPods pod names for the iOS SDK. */
+    IOS: ["VWO-FME", "Wingify-FME"],
 };
+/** Swift Package Manager repository URLs for the iOS SDK. */
+exports.IOS_SPM_REPO_URLS = [
+    "https://github.com/wingify/vwo-fme-ios-sdk",
+    "https://github.com/wingify/wingify-fme-ios-sdk",
+];
+/** Matches Wingify FME iOS SPM repository URLs in manifests. */
+exports.IOS_SPM_REPO_URL_RE = /github\.com\/wingify\/(?:vwo|wingify)-fme-ios-sdk/i;
 /** Maven coordinates for the Android SDK artifacts on Maven Central. */
 exports.ANDROID_MAVEN_COORDS = [
     { group: "com.vwo.sdk", artifact: exports.SDK_PACKAGE.ANDROID[0] },
@@ -20713,6 +20723,7 @@ exports.SDK_LABEL = {
     DOTNET: "DotNet",
     PYTHON: "Python",
     ANDROID: "Android",
+    IOS: "iOS",
 };
 /** Manifest file names / suffixes discovered by the scanner. */
 exports.MANIFEST = {
@@ -20726,6 +20737,11 @@ exports.MANIFEST = {
     BUILD_GRADLE: "build.gradle",
     BUILD_GRADLE_KTS: "build.gradle.kts",
     LIBS_VERSIONS_TOML: "libs.versions.toml",
+    PODFILE: "Podfile",
+    PODFILE_LOCK: "Podfile.lock",
+    PACKAGE_SWIFT: "Package.swift",
+    PACKAGE_RESOLVED: "Package.resolved",
+    PBXPROJ: "project.pbxproj",
 };
 /** Glob patterns used to locate manifests across the repository. */
 exports.MANIFEST_GLOBS = [
@@ -20739,6 +20755,12 @@ exports.MANIFEST_GLOBS = [
     `**/${exports.MANIFEST.BUILD_GRADLE_KTS}`,
     `**/${exports.MANIFEST.BUILD_GRADLE}`,
     `**/${exports.MANIFEST.LIBS_VERSIONS_TOML}`,
+    `**/${exports.MANIFEST.PODFILE}`,
+    `**/${exports.MANIFEST.PODFILE_LOCK}`,
+    `**/${exports.MANIFEST.PACKAGE_SWIFT}`,
+    `**/${exports.MANIFEST.PACKAGE_RESOLVED}`,
+    `**/*/*.xcodeproj/${exports.MANIFEST.PBXPROJ}`,
+    `**/*.xcodeproj/${exports.MANIFEST.PBXPROJ}`,
 ];
 /** Directories skipped while scanning for manifests. */
 exports.SCAN_IGNORE = [
@@ -20780,6 +20802,10 @@ exports.REGISTRY_URL = {
     ANDROID: [
         `https://repo1.maven.org/maven2/com/vwo/sdk/${exports.SDK_PACKAGE.ANDROID[0]}/maven-metadata.xml`,
         `https://repo1.maven.org/maven2/com/wingify/sdk/${exports.SDK_PACKAGE.ANDROID[1]}/maven-metadata.xml`,
+    ],
+    IOS: [
+        `https://trunk.cocoapods.org/api/v1/pods/${exports.SDK_PACKAGE.IOS[0]}`,
+        `https://trunk.cocoapods.org/api/v1/pods/${exports.SDK_PACKAGE.IOS[1]}`,
     ],
 };
 /** Timeout applied only to the Go module proxy request. */
@@ -21381,6 +21407,238 @@ exports["default"] = detectGo;
 
 /***/ }),
 
+/***/ 9016:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+/**
+ * Copyright 2026 Wingify Software Pvt. Ltd.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const fs_1 = __importDefault(__nccwpck_require__(9896));
+const path_1 = __importDefault(__nccwpck_require__(6928));
+const fetchLatest_1 = __importDefault(__nccwpck_require__(8588));
+const versionCompare_1 = __importDefault(__nccwpck_require__(5492));
+const reportSdk_1 = __nccwpck_require__(3369);
+const constants_1 = __nccwpck_require__(6780);
+function escapeRegExp(value) {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+/** Read a resolved CocoaPods version from `Podfile.lock` in the same directory. */
+function versionFromPodfileLock(manifestDir, podName) {
+    const lockPath = path_1.default.join(manifestDir, "Podfile.lock");
+    if (!fs_1.default.existsSync(lockPath))
+        return null;
+    const lock = fs_1.default.readFileSync(lockPath, "utf8");
+    const re = new RegExp(String.raw `- ${escapeRegExp(podName)} \(([^)\s]+)\)`);
+    const match = lock.match(re);
+    return match?.[1]?.trim() ?? null;
+}
+function normalizeSwiftPackageRequirement(raw) {
+    const trimmed = raw.trim();
+    if (!trimmed)
+        return null;
+    const fromMatch = trimmed.match(/from\s*:\s*["']([^"']+)["']/i);
+    if (fromMatch) {
+        return `>=${fromMatch[1].trim()}`;
+    }
+    const exactMatch = trimmed.match(/exact\s*:\s*["']([^"']+)["']/i);
+    if (exactMatch) {
+        return exactMatch[1].trim();
+    }
+    const upToNextMajor = trimmed.match(/upToNextMajor(?:Version)?\s*\(\s*from\s*:\s*["']([^"']+)["']\s*\)/i);
+    if (upToNextMajor) {
+        const base = upToNextMajor[1].trim();
+        const major = Number(base.split(".")[0]);
+        if (!Number.isNaN(major)) {
+            return `>=${base} <${major + 1}.0.0`;
+        }
+        return `>=${base}`;
+    }
+    const upToNextMinor = trimmed.match(/upToNextMinor(?:Version)?\s*\(\s*from\s*:\s*["']([^"']+)["']\s*\)/i);
+    if (upToNextMinor) {
+        const base = upToNextMinor[1].trim();
+        const parts = base.split(".").map((p) => Number(p));
+        if (parts.length >= 2 && !parts.some((n) => Number.isNaN(n))) {
+            const [major, minor] = parts;
+            return `>=${base} <${major}.${minor + 1}.0`;
+        }
+        return `>=${base}`;
+    }
+    if (/^[\d.]+[+\-]?$/.test(trimmed) || trimmed.includes("~>")) {
+        return trimmed;
+    }
+    return null;
+}
+function findInPodfile(content, manifestDir) {
+    for (const podName of constants_1.SDK_PACKAGE.IOS) {
+        const re = new RegExp(String.raw `pod\s+['"]${escapeRegExp(podName)}['"]` +
+            String.raw `(?:\s*,\s*['"]([^'"]+)['"])?`, "i");
+        const match = content.match(re);
+        if (!match)
+            continue;
+        const inlineVersion = match[1]?.trim();
+        const versionSpec = inlineVersion || versionFromPodfileLock(manifestDir, podName) || ">=0.0.0";
+        return { versionSpec, label: podName };
+    }
+    return null;
+}
+function findInPodfileLock(content) {
+    for (const podName of constants_1.SDK_PACKAGE.IOS) {
+        const re = new RegExp(String.raw `- ${escapeRegExp(podName)} \(([^)\s]+)\)`);
+        const match = content.match(re);
+        if (match) {
+            return { versionSpec: match[1].trim(), label: podName };
+        }
+    }
+    return null;
+}
+function findInPackageSwift(content) {
+    if (!constants_1.IOS_SPM_REPO_URL_RE.test(content))
+        return null;
+    const packageBlocks = content.matchAll(/\.package\s*\(\s*url:\s*["']([^"']+)["']\s*,([^)]*)\)/gs);
+    for (const block of packageBlocks) {
+        const url = block[1];
+        if (!constants_1.IOS_SPM_REPO_URL_RE.test(url))
+            continue;
+        const requirement = block[2];
+        const normalized = normalizeSwiftPackageRequirement(requirement);
+        if (normalized) {
+            return { versionSpec: normalized, label: url };
+        }
+    }
+    return null;
+}
+function findInPackageResolved(content) {
+    let parsed;
+    try {
+        parsed = JSON.parse(content);
+    }
+    catch {
+        return null;
+    }
+    const pins = parsed?.pins;
+    if (!Array.isArray(pins))
+        return null;
+    for (const pin of pins) {
+        const location = pin?.location ?? "";
+        if (!constants_1.IOS_SPM_REPO_URL_RE.test(location))
+            continue;
+        const state = pin?.state;
+        const version = state?.version?.trim();
+        if (version) {
+            return { versionSpec: version, label: location };
+        }
+    }
+    return null;
+}
+function findInPbxproj(content) {
+    const refBlocks = content.matchAll(/repositoryURL\s*=\s*"([^"]+)";\s*requirement\s*=\s*\{([^}]*)\}/gs);
+    for (const block of refBlocks) {
+        const url = block[1];
+        if (!constants_1.IOS_SPM_REPO_URL_RE.test(url))
+            continue;
+        const requirement = block[2];
+        const kind = requirement.match(/kind\s*=\s*(\w+)/)?.[1];
+        const minimumVersion = requirement
+            .match(/minimumVersion\s*=\s*([\d.]+)/)?.[1]
+            ?.trim();
+        const exactVersion = requirement
+            .match(/version\s*=\s*([\d.]+)/)?.[1]
+            ?.trim();
+        if (kind === "exactVersion" && exactVersion) {
+            return { versionSpec: exactVersion, label: url };
+        }
+        if (minimumVersion) {
+            if (kind === "upToNextMajorVersion") {
+                const parts = minimumVersion.split(".").map((p) => Number(p));
+                const major = parts[0];
+                if (!Number.isNaN(major)) {
+                    return {
+                        versionSpec: `>=${minimumVersion} <${major + 1}.0.0`,
+                        label: url,
+                    };
+                }
+            }
+            if (kind === "upToNextMinorVersion") {
+                const parts = minimumVersion.split(".").map((p) => Number(p));
+                if (parts.length >= 2 && !parts.some((n) => Number.isNaN(n))) {
+                    const [major, minor] = parts;
+                    return {
+                        versionSpec: `>=${minimumVersion} <${major}.${minor + 1}.0`,
+                        label: url,
+                    };
+                }
+            }
+            return { versionSpec: `>=${minimumVersion}`, label: url };
+        }
+    }
+    return null;
+}
+/**
+ * Inspect iOS dependency manifests (`Podfile`, `Podfile.lock`, `Package.swift`,
+ * `Package.resolved`, `project.pbxproj`) for Wingify FME iOS SDK dependencies
+ * and compare them with CocoaPods trunk metadata.
+ */
+async function detectIos(file) {
+    const content = fs_1.default.readFileSync(file, "utf8");
+    const manifestDir = path_1.default.dirname(path_1.default.resolve(file));
+    const base = path_1.default.basename(file);
+    let resolved = null;
+    if (base === "Podfile") {
+        resolved = findInPodfile(content, manifestDir);
+    }
+    else if (base === "Podfile.lock") {
+        resolved = findInPodfileLock(content);
+    }
+    else if (base === "Package.swift") {
+        resolved = findInPackageSwift(content);
+    }
+    else if (base === "Package.resolved") {
+        resolved = findInPackageResolved(content);
+    }
+    else if (base === "project.pbxproj") {
+        resolved = findInPbxproj(content);
+    }
+    if (!resolved)
+        return;
+    const latest = await (0, fetchLatest_1.default)(constants_1.LANG.IOS);
+    if (!latest) {
+        (0, reportSdk_1.logLatestFetchFailed)("iOS", resolved.versionSpec);
+        return;
+    }
+    if ((0, versionCompare_1.default)(resolved.versionSpec, latest)) {
+        await (0, reportSdk_1.reportOutdatedSdk)({
+            sdkLabel: constants_1.SDK_LABEL.IOS,
+            file,
+            currentVersion: resolved.versionSpec,
+            latest,
+        });
+        return;
+    }
+    (0, reportSdk_1.logSdkUpToDate)("iOS", resolved.versionSpec);
+}
+exports["default"] = detectIos;
+
+
+/***/ }),
+
 /***/ 3189:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -21805,6 +22063,7 @@ const ruby_1 = __importDefault(__nccwpck_require__(8029));
 const dotnet_1 = __importDefault(__nccwpck_require__(5288));
 const python_1 = __importDefault(__nccwpck_require__(5099));
 const android_1 = __importDefault(__nccwpck_require__(1122));
+const ios_1 = __importDefault(__nccwpck_require__(9016));
 const constants_1 = __nccwpck_require__(6780);
 /**
  * Entrypoint for the GitHub Action.
@@ -21851,6 +22110,13 @@ async function run() {
         }
         if (file.endsWith(constants_1.MANIFEST.LIBS_VERSIONS_TOML)) {
             await (0, android_1.default)(file);
+        }
+        if (file.endsWith(`/${constants_1.MANIFEST.PODFILE}`) ||
+            file.endsWith(`/${constants_1.MANIFEST.PODFILE_LOCK}`) ||
+            file.endsWith(`/${constants_1.MANIFEST.PACKAGE_SWIFT}`) ||
+            file.endsWith(`/${constants_1.MANIFEST.PACKAGE_RESOLVED}`) ||
+            file.endsWith(`/${constants_1.MANIFEST.PBXPROJ}`)) {
+            await (0, ios_1.default)(file);
         }
     }
 }
@@ -21901,6 +22167,7 @@ const constants_1 = __nccwpck_require__(6780);
  * - dotnet -> NuGet
  * - python -> PyPI
  * - android -> Maven Central (AAR artifacts)
+ * - ios     -> CocoaPods trunk API (VWO-FME / Wingify-FME)
  *
  * Returns `null` when the SDK is unknown or the registry query fails.
  */
@@ -22022,6 +22289,30 @@ async function fetchLatest(lang) {
                 }
             }
             return null;
+        }
+        if (lang === constants_1.LANG.IOS) {
+            const candidates = [];
+            for (const url of constants_1.REGISTRY_URL.IOS) {
+                try {
+                    const res = await axios_1.default.get(url);
+                    const versions = res.data?.versions;
+                    if (!Array.isArray(versions) || versions.length === 0)
+                        continue;
+                    const highest = versions
+                        .map((v) => v.name)
+                        .filter((name) => semver_1.default.coerce(name))
+                        .sort((a, b) => semver_1.default.compare(semver_1.default.coerce(a), semver_1.default.coerce(b)))
+                        .pop() ?? null;
+                    if (highest)
+                        candidates.push(highest);
+                }
+                catch {
+                    continue;
+                }
+            }
+            if (candidates.length === 0)
+                return null;
+            return candidates.sort((a, b) => semver_1.default.compare(semver_1.default.coerce(a), semver_1.default.coerce(b)))[candidates.length - 1];
         }
         if (lang === constants_1.LANG.PYTHON) {
             // Try both vwo and wingify packages
