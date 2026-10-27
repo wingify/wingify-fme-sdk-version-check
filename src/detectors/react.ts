@@ -53,6 +53,7 @@ type PnpmCatalogs = {
   named: Record<string, Record<string, string>>;
 };
 
+/** Strips surrounding quotes from a YAML scalar value. */
 function unquote(value: string): string {
   const trimmed = value.trim();
   if (
@@ -64,7 +65,7 @@ function unquote(value: string): string {
   return trimmed;
 }
 
-/** Strip an unquoted YAML `#` comment. */
+/** Removes `#` comments from a YAML line, ignoring `#` inside quoted strings. */
 function stripYamlComment(line: string): string {
   let inSingle = false;
   let inDouble = false;
@@ -77,11 +78,7 @@ function stripYamlComment(line: string): string {
   return line;
 }
 
-/**
- * Read the default `catalog` and named `catalogs` from a pnpm workspace file.
- * Versions declared as `catalog:` / `catalog:<name>` in package.json live here,
- * the same way a Gradle version catalog lives outside `build.gradle`.
- */
+/** Parses default and named package version catalogs from `pnpm-workspace.yaml`. */
 function parsePnpmCatalogs(content: string): PnpmCatalogs {
   const defaultCatalog: Record<string, string> = {};
   const named: Record<string, Record<string, string>> = {};
@@ -133,7 +130,7 @@ function parsePnpmCatalogs(content: string): PnpmCatalogs {
   return { defaultCatalog, named };
 }
 
-/** Resolve `catalog:` / `catalog:<name>` from the nearest `pnpm-workspace.yaml`. */
+/** Looks up a pnpm `catalog:` version for `packageName` in the nearest workspace file. */
 function resolveCatalogVersion(
   manifestDir: string,
   packageName: string,
@@ -162,10 +159,7 @@ function resolveCatalogVersion(
   return null;
 }
 
-/**
- * Turn a package.json version field into a comparable semver spec.
- * Git, file, and workspace links have no registry version and are skipped.
- */
+/** Normalizes a `package.json` version field to a comparable spec; skips non-registry sources. */
 function normalizeVersionSpec(
   spec: string,
   packageName: string,
@@ -188,6 +182,7 @@ function normalizeVersionSpec(
   return trimmed;
 }
 
+/** Returns the raw version string for `packageName` in a dependency section, if present. */
 function dependencySpec(
   section: Record<string, unknown> | undefined,
   packageName: string,
@@ -196,7 +191,7 @@ function dependencySpec(
   return typeof raw === "string" ? raw : null;
 }
 
-/** Depth-first search of npm overrides / Yarn resolutions / pnpm overrides. */
+/** Searches override/resolution trees for a pinned version of `packageName`. */
 function findOverrideSpec(value: unknown, packageName: string): string | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
 
@@ -213,6 +208,7 @@ function findOverrideSpec(value: unknown, packageName: string): string | null {
   return null;
 }
 
+/** Finds the first comparable FME React SDK version in dependencies or overrides. */
 function findInPackageJson(
   pkg: PackageJson,
   manifestDir: string,
@@ -241,13 +237,7 @@ function findInPackageJson(
   return null;
 }
 
-/**
- * Inspect a `package.json` for the Wingify FME React SDK.
- *
- * npm and Yarn (and pnpm / Bun) all declare the dependency in `package.json`.
- * The detector checks every dependency map, npm `overrides`, Yarn `resolutions`,
- * pnpm overrides, and pnpm catalog references in `pnpm-workspace.yaml`.
- */
+/** Scans `package.json` for the FME React SDK, compares to npm latest, and reports. */
 async function detectReact(file: string): Promise<void> {
   if (!file.endsWith("package.json")) return;
 

@@ -24,11 +24,7 @@ import {
 } from "../utils/reportSdk";
 import { LANG, SDK_LABEL, SDK_PACKAGE } from "../constants";
 
-/**
- * Inspect a `package.json` file and, if `vwo-fme-react-native-sdk` or
- * `wingify-fme-react-native-sdk` is present, compare the declared version/range
- * against the latest npm release.
- */
+/** Scans `package.json` for the FME React Native SDK, compares to npm latest, and reports. */
 async function detectReactNative(file: string): Promise<void> {
   if (!file.endsWith("package.json")) return;
 

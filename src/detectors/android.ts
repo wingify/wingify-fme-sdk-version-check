@@ -27,7 +27,7 @@ import { ANDROID_MAVEN_COORDS, LANG, SDK_LABEL, SDK_PACKAGE } from "../constants
 
 type ResolvedSdk = { versionSpec: string; coordinate: string };
 
-/** Strip Gradle/Kotlin comments from a single line (best-effort). */
+/** Removes `//`, `#`, and block comments from one Gradle/Kotlin source line. */
 function stripLineComment(line: string): string {
   const withoutBlock = line.replace(/\/\*[\s\S]*?\*\//g, "");
   const hash = withoutBlock.indexOf("#");
@@ -38,6 +38,7 @@ function stripLineComment(line: string): string {
   return withoutBlock.slice(0, cut);
 }
 
+/** Reads `gradle.properties` in `dir` into a key/value map. */
 function readGradleProperties(dir: string): Record<string, string> {
   const props: Record<string, string> = {};
   const filePath = path.join(dir, "gradle.properties");
@@ -56,7 +57,7 @@ function readGradleProperties(dir: string): Record<string, string> {
   return props;
 }
 
-/** Collect `gradle.properties` from the manifest directory up to the repo root. */
+/** Merges `gradle.properties` from `manifestDir` up to the repository root. */
 function collectGradleProperties(manifestDir: string): Record<string, string> {
   const merged: Record<string, string> = {};
   let dir = manifestDir;
@@ -73,7 +74,7 @@ function collectGradleProperties(manifestDir: string): Record<string, string> {
   return merged;
 }
 
-/** Read `ext { ... }` / `set("key", "value")` assignments from Gradle build files. */
+/** Collects `ext` and `set(...)` version variables from Gradle files walking up from `manifestDir`. */
 function collectGradleExtAssignments(manifestDir: string): Record<string, string> {
   const assignments: Record<string, string> = {};
   let dir = manifestDir;
@@ -107,6 +108,7 @@ function collectGradleExtAssignments(manifestDir: string): Record<string, string
   return assignments;
 }
 
+/** Turns a Gradle version token into a concrete version, resolving property placeholders. */
 function resolveGradleVersionToken(
   raw: string,
   manifestDir: string,
@@ -129,6 +131,7 @@ function resolveGradleVersionToken(
   return resolved?.trim() ?? null;
 }
 
+/** Checks whether `spec` is a version or range literal rather than a property reference. */
 function semverLikeRange(spec: string): boolean {
   return (
     /^[\^~>=<]/.test(spec) ||
@@ -138,6 +141,7 @@ function semverLikeRange(spec: string): boolean {
   );
 }
 
+/** Parses `[versions]` and `[libraries]` tables from a version catalog TOML file. */
 function parseVersionCatalog(content: string): {
   versions: Record<string, string>;
   libraries: Record<string, { module?: string; group?: string; name?: string; version?: string; versionRef?: string }>;
@@ -226,6 +230,7 @@ function parseVersionCatalog(content: string): {
   return { versions, libraries };
 }
 
+/** Extracts Maven coordinates and version from one catalog library entry. */
 function parseLibraryEntry(
   entry: string,
   versions: Record<string, string>,
@@ -265,6 +270,7 @@ function parseLibraryEntry(
   return result;
 }
 
+/** Checks whether `group` and `artifact` match a known FME Android Maven coordinate. */
 function coordinateMatches(
   group: string,
   artifact: string,
@@ -273,6 +279,7 @@ function coordinateMatches(
   return group === coord.group && artifact === coord.artifact;
 }
 
+/** Finds declared FME SDK Maven coordinates and versions in `build.gradle` / `.kts`. */
 function findInGradleBuild(
   content: string,
   manifestDir: string,
@@ -324,6 +331,7 @@ function findInGradleBuild(
   return null;
 }
 
+/** Finds the FME SDK version in `libs.versions.toml` catalog entries. */
 function findInVersionCatalog(
   content: string,
   _manifestDir: string,
@@ -382,13 +390,7 @@ function findInVersionCatalog(
   return null;
 }
 
-/**
- * Inspect Android build manifests for the Wingify FME Android SDK.
- *
- * An inline version in `build.gradle` or `build.gradle.kts` is reported on
- * that file. A catalog alias such as `implementation(libs.vwo.fme)` is
- * reported only from `libs.versions.toml`, where the version is written.
- */
+/** Scans Gradle build or version-catalog files for the FME SDK and reports if it is outdated. */
 async function detectAndroid(file: string): Promise<void> {
   const content = fs.readFileSync(file, "utf8");
   const manifestDir = path.dirname(path.resolve(file));

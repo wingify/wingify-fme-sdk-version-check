@@ -24,17 +24,7 @@ import {
 } from "../utils/reportSdk";
 import { LANG, SDK_LABEL, SDK_PACKAGE } from "../constants";
 
-/**
- * Convert Composer-style tilde constraints (`~`) into a semver range
- * that reflects Composer semantics rather than npm's.
- *
- * Composer:
- * - `~1.5`   -> ">=1.5.0 <2.0.0"
- * - `~1.5.0` -> ">=1.5.0 <1.6.0"
- *
- * For any spec that does not match this simple tilde pattern, the
- * original string is returned unchanged.
- */
+/** Converts Composer `~` constraints into a semver range for version comparison. */
 function composerTildeToRange(spec: string): string {
   const m = spec.match(/^~\s*([0-9]+)\.([0-9]+)(?:\.([0-9]+))?$/);
   if (!m) return spec;
@@ -52,11 +42,7 @@ function composerTildeToRange(spec: string): string {
   return `>=${lower} <${upper}`;
 }
 
-/**
- * Inspect a `composer.json` file and, if `vwo/vwo-fme-php-sdk` or `wingify/wingify-fme-php-sdk` is present
- * in either `require` or `require-dev`, compare its constraint against
- * the latest Packagist version.
- */
+/** Scans `composer.json` for the FME PHP SDK, compares to Packagist latest, and reports. */
 async function detectPhp(file: string): Promise<void> {
   const jsonRaw = fs.readFileSync(file, "utf8");
   const json = JSON.parse(jsonRaw) as {

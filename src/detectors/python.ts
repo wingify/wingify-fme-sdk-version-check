@@ -25,10 +25,7 @@ import {
 } from "../utils/reportSdk";
 import { LANG, PYTHON_REQUIREMENT_NAME_RE, SDK_LABEL } from "../constants";
 
-/**
- * Inspect a `requirements.txt` file and, if `vwo-fme-python-sdk` is listed,
- * compare the declared constraint against the latest PyPI release.
- */
+/** Scans `requirements.txt` for the FME Python package, compares to PyPI latest, and reports. */
 async function detectPython(file: string): Promise<void> {
   const raw = fs.readFileSync(file, "utf8");
 

@@ -40,6 +40,7 @@ type PackageJsonDeps = {
   peerDependencies?: Record<string, string>;
 };
 
+/** Loads and parses `package.json`; returns null when the file is missing or invalid. */
 function readPackageJson(packageJsonPath: string): PackageJsonDeps | null {
   try {
     return JSON.parse(fs.readFileSync(packageJsonPath, "utf8")) as PackageJsonDeps;
@@ -48,6 +49,7 @@ function readPackageJson(packageJsonPath: string): PackageJsonDeps | null {
   }
 }
 
+/** Checks whether `package.json` declares a React Native FME SDK dependency. */
 function packageJsonDeclaresReactNativeSdk(packageJsonPath: string): boolean {
   const pkg = readPackageJson(packageJsonPath);
   if (!pkg) return false;
@@ -65,7 +67,7 @@ function packageJsonDeclaresReactNativeSdk(packageJsonPath: string): boolean {
   return false;
 }
 
-/** Standard React Native app layout (`package.json` + `ios/` sibling folder). */
+/** Checks whether `package.json` depends on `react-native` (standard RN app layout). */
 function packageJsonIsReactNativeApp(packageJsonPath: string): boolean {
   const pkg = readPackageJson(packageJsonPath);
   if (!pkg) return false;
@@ -76,7 +78,7 @@ function packageJsonIsReactNativeApp(packageJsonPath: string): boolean {
   );
 }
 
-/** Whether `manifestPath` is part of the iOS native tree for a React Native app root. */
+/** Checks whether `manifestPath` lives under the `ios/` folder for `rnProjectRoot`. */
 function isManifestInReactNativeIosTree(
   manifestPath: string,
   rnProjectRoot: string,
@@ -100,14 +102,12 @@ function isManifestInReactNativeIosTree(
   return false;
 }
 
+/** Checks whether `base` is a CocoaPods manifest name (`Podfile` or `Podfile.lock`). */
 function isCocoaPodsManifestBase(base: string): boolean {
   return base === MANIFEST.PODFILE || base === MANIFEST.PODFILE_LOCK;
 }
 
-/**
- * CocoaPods manifests generated for React Native (lockfile lists the RN pod;
- * `Podfile` often only calls `use_react_native!`).
- */
+/** Detects React Native CocoaPods content (RN pods or `use_react_native!` in `Podfile`). */
 function isReactNativeCocoaPodsManifestContent(
   content: string,
   base: string,
@@ -132,10 +132,7 @@ function isReactNativeCocoaPodsManifestContent(
   return false;
 }
 
-/**
- * React Native apps ship native iOS deps under `{app}/ios/`; version checks for
- * those projects use `package.json` only (see `detectReactNative`).
- */
+/** Skips native iOS manifests that belong to a React Native app (handled via `package.json`). */
 function isReactNativeIosManifest(file: string, content?: string): boolean {
   const manifestPath = path.resolve(file);
   const manifestDir = path.dirname(manifestPath);
@@ -188,11 +185,12 @@ function isReactNativeIosManifest(file: string, content?: string): boolean {
   return false;
 }
 
+/** Escapes regex metacharacters in `value` for use in a `RegExp` pattern. */
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-/** Read a resolved CocoaPods version from `Podfile.lock` in the same directory. */
+/** Looks up the resolved version of `podName` in a sibling `Podfile.lock`. */
 function versionFromPodfileLock(
   manifestDir: string,
   podName: string,
@@ -208,6 +206,7 @@ function versionFromPodfileLock(
   return match?.[1]?.trim() ?? null;
 }
 
+/** Converts a `Package.swift` SPM requirement string into a semver-style spec. */
 function normalizeSwiftPackageRequirement(raw: string): string | null {
   const trimmed = raw.trim();
   if (!trimmed) return null;
@@ -254,6 +253,7 @@ function normalizeSwiftPackageRequirement(raw: string): string | null {
   return null;
 }
 
+/** Finds a Wingify iOS pod in `Podfile` and resolves its version from the file or lock. */
 function findInPodfile(content: string, manifestDir: string): ResolvedSdk | null {
   for (const podName of SDK_PACKAGE.IOS) {
     const re = new RegExp(
@@ -274,6 +274,7 @@ function findInPodfile(content: string, manifestDir: string): ResolvedSdk | null
   return null;
 }
 
+/** Finds a Wingify iOS pod entry and its resolved version in `Podfile.lock`. */
 function findInPodfileLock(content: string): ResolvedSdk | null {
   for (const podName of SDK_PACKAGE.IOS) {
     const re = new RegExp(
@@ -288,6 +289,7 @@ function findInPodfileLock(content: string): ResolvedSdk | null {
   return null;
 }
 
+/** Finds the Wingify FME Swift package and its version constraint in `Package.swift`. */
 function findInPackageSwift(content: string): ResolvedSdk | null {
   if (!IOS_SPM_REPO_URL_RE.test(content)) return null;
 
@@ -309,6 +311,7 @@ function findInPackageSwift(content: string): ResolvedSdk | null {
   return null;
 }
 
+/** Checks whether an SPM pin points at the Wingify FME iOS package. */
 function isWingifyIosSpmPin(pin: {
   location?: string;
   identity?: string;
@@ -320,6 +323,7 @@ function isWingifyIosSpmPin(pin: {
   return IOS_SPM_PACKAGE_IDENTITIES.some((id) => identity === id);
 }
 
+/** Reads the pinned Wingify iOS SDK version from `Package.resolved` JSON. */
 function findInPackageResolved(content: string): ResolvedSdk | null {
   let parsed: unknown;
   try {
@@ -349,7 +353,7 @@ function findInPackageResolved(content: string): ResolvedSdk | null {
   return null;
 }
 
-/** Xcode SPM lockfile beside an `.xcodeproj` (when Xcode has resolved packages). */
+/** Returns the path to `Package.resolved` inside the `.xcodeproj` workspace, if it exists. */
 function packageResolvedBesideXcodeproj(pbxprojFile: string): string | null {
   const xcodeprojDir = path.dirname(path.resolve(pbxprojFile));
   if (!xcodeprojDir.endsWith(".xcodeproj")) return null;
@@ -364,11 +368,13 @@ function packageResolvedBesideXcodeproj(pbxprojFile: string): string | null {
   return fs.existsSync(resolvedPath) ? resolvedPath : null;
 }
 
+/** Loads `Package.resolved` at `filePath` and returns the Wingify SDK pin version. */
 function versionFromPackageResolvedAt(filePath: string): string | null {
   const content = fs.readFileSync(filePath, "utf8");
   return findInPackageResolved(content)?.versionSpec ?? null;
 }
 
+/** Finds the nearest `Package.resolved` and returns the locked Wingify SDK version. */
 function versionFromSpmLockfile(
   file: string,
   manifestDir: string,
@@ -387,6 +393,7 @@ function versionFromSpmLockfile(
   return null;
 }
 
+/** Formats an SPM version constraint for logs when no lockfile pin is available. */
 function formatConstraintOnlyDisplay(constraintSpec: string): string {
   const minRange = constraintSpec.match(/^>=([\d.]+)\s*(<.+)$/);
   if (minRange) {
@@ -401,6 +408,7 @@ function formatConstraintOnlyDisplay(constraintSpec: string): string {
   return constraintSpec;
 }
 
+/** Builds the version string shown in reports from SPM constraint and lock pin. */
 function formatSpmVersionDisplay(
   constraintSpec: string,
   lockedVersion: string | null,
@@ -422,12 +430,14 @@ function formatSpmVersionDisplay(
   return lockedVersion;
 }
 
+/** Treats two version strings as equal when their leading numeric segments match. */
 function semverEquivalent(a: string, b: string): boolean {
   const coercedA = a.match(/^[\d.]+/)?.[0];
   const coercedB = b.match(/^[\d.]+/)?.[0];
   return Boolean(coercedA && coercedB && coercedA === coercedB);
 }
 
+/** Checks whether `base` is an Xcode or SwiftPM manifest handled as SPM. */
 function isSpmManifestBase(base: string): boolean {
   return (
     base === MANIFEST.PBXPROJ ||
@@ -436,11 +446,7 @@ function isSpmManifestBase(base: string): boolean {
   );
 }
 
-/**
- * Version to compare against registry latest for SPM manifests.
- * Uses the lock pin when present; otherwise the declared minimum / exact version,
- * not whether a semver range would still admit the latest release.
- */
+/** Picks the version to compare with the registry for SPM (lock pin, else minimum/exact). */
 function spmVersionForComparison(
   constraintSpec: string,
   lockedVersion: string | null,
@@ -456,6 +462,7 @@ function spmVersionForComparison(
   return constraintSpec;
 }
 
+/** Finds Wingify SPM package references and version rules in `project.pbxproj`. */
 function findInPbxproj(content: string): ResolvedSdk | null {
   const refBlocks = content.matchAll(
     /repositoryURL\s*=\s*"([^"]+)";\s*requirement\s*=\s*\{([^}]*)\}/gs,
@@ -507,11 +514,7 @@ function findInPbxproj(content: string): ResolvedSdk | null {
   return null;
 }
 
-/**
- * Inspect iOS dependency manifests (`Podfile`, `Podfile.lock`, `Package.swift`,
- * `Package.resolved`, `project.pbxproj`) for Wingify FME iOS SDK dependencies
- * and compare them with CocoaPods trunk metadata.
- */
+/** Scans an iOS manifest for the FME SDK, compares it to the latest release, and reports. */
 async function detectIos(file: string): Promise<void> {
   const content = fs.readFileSync(file, "utf8");
   if (isReactNativeIosManifest(file, content)) return;

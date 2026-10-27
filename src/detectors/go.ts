@@ -24,11 +24,7 @@ import {
 } from "../utils/reportSdk";
 import { LANG, SDK_LABEL, SDK_PACKAGE } from "../constants";
 
-/**
- * Inspect a `go.mod` file and, if the module path for the Go SDK is present,
- * compare the required version against the latest version available from
- * the Go module proxy.
- */
+/** Scans `go.mod` for the FME Go module, compares to the proxy latest, and reports. */
 async function detectGo(file: string): Promise<void> {
   try {
     const gomod = fs.readFileSync(file, "utf8");

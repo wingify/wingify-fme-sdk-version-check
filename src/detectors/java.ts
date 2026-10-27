@@ -24,11 +24,7 @@ import {
 } from "../utils/reportSdk";
 import { LANG, SDK_LABEL, SDK_PACKAGE } from "../constants";
 
-/**
- * Inspect a `pom.xml` and, if the `vwo-fme-java-sdk` or `wingify-fme-java-sdk` dependency is present,
- * compare its version (or range) with the latest version reported by
- * Maven Central metadata.
- */
+/** Scans `pom.xml` for the FME Java SDK, compares to Maven Central latest, and reports. */
 async function detectJava(file: string): Promise<void> {
   const xml = fs.readFileSync(file, "utf8");
 

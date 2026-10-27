@@ -33,17 +33,14 @@ const PUBSPEC_DEP_SECTIONS = [
 
 type PubspecDeps = Record<string, string>;
 
-/** Strip YAML comments from a line (best-effort). */
+/** Cuts off inline `#` comments from a pubspec YAML line. */
 function stripYamlComment(line: string): string {
   const hash = line.indexOf("#");
   if (hash === -1) return line;
   return line.slice(0, hash);
 }
 
-/**
- * Parse `dependencies`, `dev_dependencies`, and `dependency_overrides` from
- * `pubspec.yaml`.
- */
+/** Parses dependency sections from `pubspec.yaml` into package → version map. */
 function parsePubspecDependencySections(content: string): PubspecDeps {
   const deps: PubspecDeps = {};
   const lines = content.split(/\r?\n/);
@@ -110,7 +107,7 @@ function parsePubspecDependencySections(content: string): PubspecDeps {
   return deps;
 }
 
-/** Resolved package versions from the `packages:` section of `pubspec.lock`. */
+/** Parses resolved package versions from the `packages:` section of `pubspec.lock`. */
 function parsePubspecLockPackages(content: string): PubspecDeps {
   const deps: PubspecDeps = {};
   const lines = content.split(/\r?\n/);
@@ -153,6 +150,7 @@ function parsePubspecLockPackages(content: string): PubspecDeps {
   return deps;
 }
 
+/** Loads the locked version of `packageName` from `pubspec.lock` next to the manifest. */
 function versionFromPubspecLock(
   manifestDir: string,
   packageName: string,
@@ -164,6 +162,7 @@ function versionFromPubspecLock(
   return parsePubspecLockPackages(lockContent)[packageName] ?? null;
 }
 
+/** Returns the version constraint for the first FME Flutter SDK listed in pubspec. */
 function findInPubspecYaml(content: string): string | null {
   const deps = parsePubspecDependencySections(content);
 
@@ -186,6 +185,7 @@ function findInPubspecYaml(content: string): string | null {
   return null;
 }
 
+/** Returns the pub package name of the first declared FME Flutter SDK, if any. */
 function findFlutterPackageInPubspec(content: string): string | null {
   const deps = parsePubspecDependencySections(content);
   for (const packageName of SDK_PACKAGE.FLUTTER) {
@@ -194,10 +194,7 @@ function findFlutterPackageInPubspec(content: string): string | null {
   return null;
 }
 
-/**
- * Inspect `pubspec.yaml` for Wingify FME Flutter SDK dependencies and compare
- * them with pub.dev releases.
- */
+/** Scans `pubspec.yaml` for the FME Flutter SDK, compares to pub.dev, and reports. */
 async function detectFlutter(file: string): Promise<void> {
   if (!file.endsWith("pubspec.yaml")) return;
 
