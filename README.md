@@ -103,14 +103,22 @@ or
 wingify-fme-python-sdk==1.2.3
 ```
 
-**Android** (`build.gradle` / `build.gradle.kts`):
+**Android** — version written in `build.gradle` / `build.gradle.kts`:
 ```gradle
 implementation "com.vwo.sdk:vwo-fme-android-sdk:1.75.0"
 ```
-or Kotlin DSL / version catalog (`gradle/libs.versions.toml`):
+
+**Android** — version catalog. `app/build.gradle.kts` only references the alias:
+```kotlin
+implementation(libs.vwo.fme)
+```
+The version is declared in `gradle/libs.versions.toml`, and that file is the one reported:
 ```toml
+[versions]
+vwo-fme = "1.80.0"
+
 [libraries]
-wingify-fme = { module = "com.wingify.sdk:wingify-fme-android-sdk", version = "1.80.0" }
+vwo-fme = { module = "com.wingify.sdk:wingify-fme-android-sdk", version.ref = "vwo-fme" }
 ```
 
 **iOS — CocoaPods** (`Podfile` / `Podfile.lock`):
@@ -254,9 +262,12 @@ When an SDK is **outdated**, it prints a Slack-formatted message that includes t
     normalized before comparison. An unpinned requirement is treated as
     covering the latest version.
 - **Android (`build.gradle` / `libs.versions.toml`)**:
-  - Version catalogs, Kotlin DSL, Groovy `implementation` lines, and common
-    Gradle variable references (`$variable`, `project.ext`) are resolved before
-    comparison.
+  - An inline version in `build.gradle` or `build.gradle.kts` is reported on
+    that file.
+  - A catalog alias such as `implementation(libs.vwo.fme)` is reported only
+    on `libs.versions.toml`, where the version is declared.
+  - Kotlin DSL, Groovy `implementation` lines, and common Gradle variable
+    references (`$variable`, `project.ext`) are resolved before comparison.
 - **iOS (`Podfile` / SPM)**:
   - CocoaPods `~>` constraints use the same pessimistic semantics as Ruby
     (`~> 1.66` → `>=1.66.0 <2.0.0`).

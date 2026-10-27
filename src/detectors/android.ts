@@ -273,100 +273,13 @@ function coordinateMatches(
   return group === coord.group && artifact === coord.artifact;
 }
 
-function findVersionCatalogFiles(manifestDir: string): string[] {
-  const found: string[] = [];
-  let dir = manifestDir;
-  const root = path.resolve(".");
-
-  while (dir === root || dir.startsWith(root + path.sep)) {
-    for (const rel of [
-      "gradle/libs.versions.toml",
-      "libs.versions.toml",
-      "gradle/version-catalog/libs.versions.toml",
-    ]) {
-      const candidate = path.join(dir, rel);
-      if (fs.existsSync(candidate)) found.push(candidate);
-    }
-    if (dir === root) break;
-    const parent = path.dirname(dir);
-    if (parent === dir) break;
-    dir = parent;
-  }
-
-  return found;
-}
-
-/** Gradle turns `vwo-fme-android-sdk` into `libs.vwo.fme.android.sdk`. */
-function catalogAliasToTomlKey(alias: string): string {
-  return alias.replace(/\./g, "-");
-}
-
-function resolveLibraryEntryVersion(
-  entry: {
-    module?: string;
-    group?: string;
-    name?: string;
-    version?: string;
-    versionRef?: string;
-  },
-  versions: Record<string, string>,
-): string | undefined {
-  if (entry.version) return entry.version;
-  if (entry.versionRef) return versions[entry.versionRef];
-  return undefined;
-}
-
-function findViaVersionCatalogAlias(
-  content: string,
-  manifestDir: string,
-): ResolvedSdk | null {
-  const aliasMatches = content.matchAll(/\blibs\.([a-z][a-z0-9.]*)/gi);
-  const catalogPaths = findVersionCatalogFiles(manifestDir);
-  if (catalogPaths.length === 0) return null;
-
-  for (const m of aliasMatches) {
-    const tomlKey = catalogAliasToTomlKey(m[1]);
-    for (const catalogPath of catalogPaths) {
-      const catalogContent = fs.readFileSync(catalogPath, "utf8");
-      const { versions, libraries } = parseVersionCatalog(catalogContent);
-      const entry = libraries[tomlKey];
-      if (!entry) continue;
-
-      let group: string | undefined;
-      let artifact: string | undefined;
-      if (entry.module) {
-        const parts = entry.module.split(":");
-        group = parts[0];
-        artifact = parts[1];
-      } else {
-        group = entry.group;
-        artifact = entry.name;
-      }
-
-      const versionSpec = resolveLibraryEntryVersion(entry, versions);
-      if (!group || !artifact || !versionSpec) continue;
-
-      for (const coord of ANDROID_MAVEN_COORDS) {
-        if (coordinateMatches(group, artifact, coord)) {
-          return {
-            versionSpec,
-            coordinate: `${coord.group}:${coord.artifact}`,
-          };
-        }
-      }
-    }
-  }
-
-  return null;
-}
-
 function findInGradleBuild(
   content: string,
   manifestDir: string,
 ): ResolvedSdk | null {
-  const viaAlias = findViaVersionCatalogAlias(content, manifestDir);
-  if (viaAlias) return viaAlias;
-
+  // A catalog alias such as `implementation(libs.vwo.fme)` does not contain
+  // the version. That version is declared in `libs.versions.toml`, which is
+  // scanned on its own. Resolving the alias here would report both files.
   for (const coord of ANDROID_MAVEN_COORDS) {
     const g = coord.group.replace(/\./g, "\\.");
     const a = coord.artifact;
@@ -428,6 +341,9 @@ function findInVersionCatalog(
         group = parts[0];
         artifact = parts[1];
         versionSpec = entry.version ?? parts[2];
+        if (entry.versionRef && !versionSpec) {
+          versionSpec = versions[entry.versionRef];
+        }
       }
     } else {
       group = entry.group;
@@ -467,9 +383,11 @@ function findInVersionCatalog(
 }
 
 /**
- * Inspect Android build manifests (`build.gradle`, `build.gradle.kts`,
- * `libs.versions.toml`) for Wingify FME Android SDK dependencies and compare
- * them with Maven Central metadata.
+ * Inspect Android build manifests for the Wingify FME Android SDK.
+ *
+ * An inline version in `build.gradle` or `build.gradle.kts` is reported on
+ * that file. A catalog alias such as `implementation(libs.vwo.fme)` is
+ * reported only from `libs.versions.toml`, where the version is written.
  */
 async function detectAndroid(file: string): Promise<void> {
   const content = fs.readFileSync(file, "utf8");
