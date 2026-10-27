@@ -24,6 +24,7 @@ import detectDotnet from "./detectors/dotnet";
 import detectPython from "./detectors/python";
 import detectAndroid from "./detectors/android";
 import detectIos from "./detectors/ios";
+import detectReactNative from "./detectors/reactNative";
 import { ENV, MANIFEST } from "./constants";
 
 /**
@@ -45,6 +46,7 @@ async function run(): Promise<void> {
   for (const file of files) {
     if (file.endsWith(MANIFEST.PACKAGE_JSON)) {
       await detectNode(file);
+      await detectReactNative(file);
     }
 
     if (file.endsWith(MANIFEST.POM_XML)) {

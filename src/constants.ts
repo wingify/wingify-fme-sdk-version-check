@@ -30,6 +30,7 @@ export const LANG = {
   PYTHON: "python",
   ANDROID: "android",
   IOS: "ios",
+  REACT_NATIVE: "react-native",
 } as const;
 
 export type Lang = (typeof LANG)[keyof typeof LANG];
@@ -47,6 +48,8 @@ export const SDK_PACKAGE = {
   ANDROID: ["vwo-fme-android-sdk", "wingify-fme-android-sdk"],
   /** CocoaPods pod names for the iOS SDK. */
   IOS: ["VWO-FME", "Wingify-FME"],
+  /** npm package names for the React Native SDK. */
+  REACT_NATIVE: ["vwo-fme-react-native-sdk", "wingify-fme-react-native-sdk"],
 } as const;
 
 /** Swift Package Manager repository URLs for the iOS SDK. */
@@ -76,6 +79,7 @@ export const SDK_LABEL = {
   PYTHON: "Python",
   ANDROID: "Android",
   IOS: "iOS",
+  REACT_NATIVE: "React Native",
 } as const;
 
 /** Manifest file names / suffixes discovered by the scanner. */
@@ -162,6 +166,10 @@ export const REGISTRY_URL = {
   IOS: [
     `https://trunk.cocoapods.org/api/v1/pods/${SDK_PACKAGE.IOS[0]}`,
     `https://trunk.cocoapods.org/api/v1/pods/${SDK_PACKAGE.IOS[1]}`,
+  ],
+  REACT_NATIVE: [
+    `https://registry.npmjs.org/${SDK_PACKAGE.REACT_NATIVE[0]}/latest`,
+    `https://registry.npmjs.org/${SDK_PACKAGE.REACT_NATIVE[1]}/latest`,
   ],
 } as const;
 

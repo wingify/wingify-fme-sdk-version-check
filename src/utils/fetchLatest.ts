@@ -37,19 +37,20 @@ import {
  * - python -> PyPI
  * - android -> Maven Central (AAR artifacts)
  * - ios     -> CocoaPods trunk API (VWO-FME / Wingify-FME)
+ * - react-native -> npm (vwo-fme-react-native-sdk / wingify-fme-react-native-sdk)
  *
  * Returns `null` when the SDK is unknown or the registry query fails.
  */
 async function fetchLatest(lang: Lang): Promise<string | null> {
   try {
-    if (lang === LANG.NODE) {
-      // Try both vwo and wingify packages
-      for (const url of REGISTRY_URL.NODE) {
+    if (lang === LANG.NODE || lang === LANG.REACT_NATIVE) {
+      const urls =
+        lang === LANG.NODE ? REGISTRY_URL.NODE : REGISTRY_URL.REACT_NATIVE;
+      for (const url of urls) {
         try {
           const res = await axios.get(url);
           return res.data.version as string;
-        } catch (err) {
-          // Continue to next URL if this one fails
+        } catch {
           continue;
         }
       }

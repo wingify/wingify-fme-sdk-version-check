@@ -20686,6 +20686,7 @@ exports.LANG = {
     PYTHON: "python",
     ANDROID: "android",
     IOS: "ios",
+    REACT_NATIVE: "react-native",
 };
 /** Package / artifact names as they appear in each ecosystem. */
 exports.SDK_PACKAGE = {
@@ -20700,6 +20701,8 @@ exports.SDK_PACKAGE = {
     ANDROID: ["vwo-fme-android-sdk", "wingify-fme-android-sdk"],
     /** CocoaPods pod names for the iOS SDK. */
     IOS: ["VWO-FME", "Wingify-FME"],
+    /** npm package names for the React Native SDK. */
+    REACT_NATIVE: ["vwo-fme-react-native-sdk", "wingify-fme-react-native-sdk"],
 };
 /** Swift Package Manager repository URLs for the iOS SDK. */
 exports.IOS_SPM_REPO_URLS = [
@@ -20724,6 +20727,7 @@ exports.SDK_LABEL = {
     PYTHON: "Python",
     ANDROID: "Android",
     IOS: "iOS",
+    REACT_NATIVE: "React Native",
 };
 /** Manifest file names / suffixes discovered by the scanner. */
 exports.MANIFEST = {
@@ -20806,6 +20810,10 @@ exports.REGISTRY_URL = {
     IOS: [
         `https://trunk.cocoapods.org/api/v1/pods/${exports.SDK_PACKAGE.IOS[0]}`,
         `https://trunk.cocoapods.org/api/v1/pods/${exports.SDK_PACKAGE.IOS[1]}`,
+    ],
+    REACT_NATIVE: [
+        `https://registry.npmjs.org/${exports.SDK_PACKAGE.REACT_NATIVE[0]}/latest`,
+        `https://registry.npmjs.org/${exports.SDK_PACKAGE.REACT_NATIVE[1]}/latest`,
     ],
 };
 /** Timeout applied only to the Go module proxy request. */
@@ -21957,6 +21965,86 @@ exports["default"] = detectPython;
 
 /***/ }),
 
+/***/ 3173:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+/**
+ * Copyright 2026 Wingify Software Pvt. Ltd.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const fs_1 = __importDefault(__nccwpck_require__(9896));
+const fetchLatest_1 = __importDefault(__nccwpck_require__(8588));
+const versionCompare_1 = __importDefault(__nccwpck_require__(5492));
+const reportSdk_1 = __nccwpck_require__(3369);
+const constants_1 = __nccwpck_require__(6780);
+/**
+ * Inspect a `package.json` file and, if `vwo-fme-react-native-sdk` or
+ * `wingify-fme-react-native-sdk` is present, compare the declared version/range
+ * against the latest npm release.
+ */
+async function detectReactNative(file) {
+    if (!file.endsWith("package.json"))
+        return;
+    const pkgRaw = fs_1.default.readFileSync(file, "utf8");
+    let pkg;
+    try {
+        pkg = JSON.parse(pkgRaw);
+    }
+    catch {
+        return;
+    }
+    let versionSpec;
+    let packageName;
+    for (const packageName_ of constants_1.SDK_PACKAGE.REACT_NATIVE) {
+        versionSpec =
+            pkg.dependencies?.[packageName_] ||
+                pkg.devDependencies?.[packageName_] ||
+                pkg.peerDependencies?.[packageName_];
+        if (versionSpec) {
+            packageName = packageName_;
+            break;
+        }
+    }
+    if (!versionSpec || !packageName)
+        return;
+    const latest = await (0, fetchLatest_1.default)(constants_1.LANG.REACT_NATIVE);
+    if (!latest) {
+        (0, reportSdk_1.logLatestFetchFailed)("React Native", versionSpec);
+        return;
+    }
+    if ((0, versionCompare_1.default)(versionSpec, latest)) {
+        await (0, reportSdk_1.reportOutdatedSdk)({
+            sdkLabel: constants_1.SDK_LABEL.REACT_NATIVE,
+            file,
+            currentVersion: versionSpec,
+            latest,
+        });
+        return;
+    }
+    (0, reportSdk_1.logSdkUpToDate)("React Native", versionSpec);
+}
+exports["default"] = detectReactNative;
+
+
+/***/ }),
+
 /***/ 8029:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -22064,6 +22152,7 @@ const dotnet_1 = __importDefault(__nccwpck_require__(5288));
 const python_1 = __importDefault(__nccwpck_require__(5099));
 const android_1 = __importDefault(__nccwpck_require__(1122));
 const ios_1 = __importDefault(__nccwpck_require__(9016));
+const reactNative_1 = __importDefault(__nccwpck_require__(3173));
 const constants_1 = __nccwpck_require__(6780);
 /**
  * Entrypoint for the GitHub Action.
@@ -22083,6 +22172,7 @@ async function run() {
     for (const file of files) {
         if (file.endsWith(constants_1.MANIFEST.PACKAGE_JSON)) {
             await (0, node_1.default)(file);
+            await (0, reactNative_1.default)(file);
         }
         if (file.endsWith(constants_1.MANIFEST.POM_XML)) {
             await (0, java_1.default)(file);
@@ -22168,20 +22258,20 @@ const constants_1 = __nccwpck_require__(6780);
  * - python -> PyPI
  * - android -> Maven Central (AAR artifacts)
  * - ios     -> CocoaPods trunk API (VWO-FME / Wingify-FME)
+ * - react-native -> npm (vwo-fme-react-native-sdk / wingify-fme-react-native-sdk)
  *
  * Returns `null` when the SDK is unknown or the registry query fails.
  */
 async function fetchLatest(lang) {
     try {
-        if (lang === constants_1.LANG.NODE) {
-            // Try both vwo and wingify packages
-            for (const url of constants_1.REGISTRY_URL.NODE) {
+        if (lang === constants_1.LANG.NODE || lang === constants_1.LANG.REACT_NATIVE) {
+            const urls = lang === constants_1.LANG.NODE ? constants_1.REGISTRY_URL.NODE : constants_1.REGISTRY_URL.REACT_NATIVE;
+            for (const url of urls) {
                 try {
                     const res = await axios_1.default.get(url);
                     return res.data.version;
                 }
-                catch (err) {
-                    // Continue to next URL if this one fails
+                catch {
                     continue;
                 }
             }
