@@ -21783,6 +21783,27 @@ function semverEquivalent(a, b) {
     const coercedB = b.match(/^[\d.]+/)?.[0];
     return Boolean(coercedA && coercedB && coercedA === coercedB);
 }
+function isSpmManifestBase(base) {
+    return (base === constants_1.MANIFEST.PBXPROJ ||
+        base === constants_1.MANIFEST.PACKAGE_SWIFT ||
+        base === constants_1.MANIFEST.PACKAGE_RESOLVED);
+}
+/**
+ * Version to compare against registry latest for SPM manifests.
+ * Uses the lock pin when present; otherwise the declared minimum / exact version,
+ * not whether a semver range would still admit the latest release.
+ */
+function spmVersionForComparison(constraintSpec, lockedVersion) {
+    if (lockedVersion)
+        return lockedVersion;
+    const minFromRange = constraintSpec.match(/^>=([\d.]+)/)?.[1];
+    if (minFromRange)
+        return minFromRange;
+    const trimmed = constraintSpec.trim();
+    if (/^[\d.]+$/.test(trimmed))
+        return trimmed;
+    return constraintSpec;
+}
 function findInPbxproj(content) {
     const refBlocks = content.matchAll(/repositoryURL\s*=\s*"([^"]+)";\s*requirement\s*=\s*\{([^}]*)\}/gs);
     for (const block of refBlocks) {
@@ -21863,14 +21884,15 @@ async function detectIos(file) {
         ? versionFromSpmLockfile(file, manifestDir, base)
         : null;
     const displaySpec = formatSpmVersionDisplay(constraintSpec, lockedVersion);
-    const comparePrimary = lockedVersion ?? constraintSpec;
+    const comparePrimary = isSpmManifestBase(base)
+        ? spmVersionForComparison(constraintSpec, lockedVersion)
+        : (lockedVersion ?? constraintSpec);
     const latest = await (0, fetchLatest_1.default)(constants_1.LANG.IOS);
     if (!latest) {
         (0, reportSdk_1.logLatestFetchFailed)("iOS", displaySpec);
         return;
     }
-    const outdated = (0, versionCompare_1.default)(comparePrimary, latest) ||
-        (lockedVersion != null && (0, versionCompare_1.default)(constraintSpec, latest));
+    const outdated = (0, versionCompare_1.default)(comparePrimary, latest);
     if (outdated) {
         await (0, reportSdk_1.reportOutdatedSdk)({
             sdkLabel: constants_1.SDK_LABEL.IOS,

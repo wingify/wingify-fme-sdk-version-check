@@ -272,8 +272,11 @@ When an SDK is **outdated**, it prints a Slack-formatted message that includes t
   - CocoaPods `~>` constraints use the same pessimistic semantics as Ruby
     (`~> 1.66` → `>=1.66.0 <2.0.0`).
   - Swift Package Manager `from`, `exact`, `upToNextMajor`, and `upToNextMinor`
-    requirements are normalized to semver ranges. Pins in `Package.resolved` are
-    compared as fixed versions.
+    requirements are normalized to semver ranges for display. **Outdated checks**
+    use the pinned version in `Package.resolved` when present, otherwise the
+    declared minimum / exact version from `project.pbxproj` or `Package.swift`
+    (not whether the range still admits the latest release).
+  - Pins in `Package.resolved` are compared as fixed versions.
 - **React Native (`package.json`)**:
   - npm semver ranges follow the same rules as Node.
 - **React (`package.json`)**:

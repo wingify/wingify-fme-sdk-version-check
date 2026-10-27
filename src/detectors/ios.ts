@@ -274,6 +274,34 @@ function semverEquivalent(a: string, b: string): boolean {
   return Boolean(coercedA && coercedB && coercedA === coercedB);
 }
 
+function isSpmManifestBase(base: string): boolean {
+  return (
+    base === MANIFEST.PBXPROJ ||
+    base === MANIFEST.PACKAGE_SWIFT ||
+    base === MANIFEST.PACKAGE_RESOLVED
+  );
+}
+
+/**
+ * Version to compare against registry latest for SPM manifests.
+ * Uses the lock pin when present; otherwise the declared minimum / exact version,
+ * not whether a semver range would still admit the latest release.
+ */
+function spmVersionForComparison(
+  constraintSpec: string,
+  lockedVersion: string | null,
+): string {
+  if (lockedVersion) return lockedVersion;
+
+  const minFromRange = constraintSpec.match(/^>=([\d.]+)/)?.[1];
+  if (minFromRange) return minFromRange;
+
+  const trimmed = constraintSpec.trim();
+  if (/^[\d.]+$/.test(trimmed)) return trimmed;
+
+  return constraintSpec;
+}
+
 function findInPbxproj(content: string): ResolvedSdk | null {
   const refBlocks = content.matchAll(
     /repositoryURL\s*=\s*"([^"]+)";\s*requirement\s*=\s*\{([^}]*)\}/gs,
@@ -365,7 +393,9 @@ async function detectIos(file: string): Promise<void> {
       ? versionFromSpmLockfile(file, manifestDir, base)
       : null;
   const displaySpec = formatSpmVersionDisplay(constraintSpec, lockedVersion);
-  const comparePrimary = lockedVersion ?? constraintSpec;
+  const comparePrimary = isSpmManifestBase(base)
+    ? spmVersionForComparison(constraintSpec, lockedVersion)
+    : (lockedVersion ?? constraintSpec);
 
   const latest = await fetchLatest(LANG.IOS);
   if (!latest) {
@@ -373,9 +403,7 @@ async function detectIos(file: string): Promise<void> {
     return;
   }
 
-  const outdated =
-    isOutdated(comparePrimary, latest) ||
-    (lockedVersion != null && isOutdated(constraintSpec, latest));
+  const outdated = isOutdated(comparePrimary, latest);
 
   if (outdated) {
     await reportOutdatedSdk({
