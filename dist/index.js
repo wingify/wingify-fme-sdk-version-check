@@ -20670,7 +20670,7 @@ module.exports = require("zlib");
  * limitations under the License.
  */
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.PYTHON_REQUIREMENT_NAME_RE = exports.FALLBACK_REPO_DISPLAY_NAME = exports.DEFAULT_GITHUB_SERVER_URL = exports.ENV = exports.GO_PROXY_TIMEOUT_MS = exports.REGISTRY_URL = exports.SCAN_IGNORE = exports.MANIFEST_GLOBS = exports.MANIFEST = exports.SDK_LABEL = exports.ANDROID_MAVEN_COORDS = exports.IOS_SPM_REPO_URL_RE = exports.IOS_SPM_REPO_URLS = exports.SDK_PACKAGE = exports.LANG = void 0;
+exports.PYTHON_REQUIREMENT_NAME_RE = exports.FALLBACK_REPO_DISPLAY_NAME = exports.DEFAULT_GITHUB_SERVER_URL = exports.ENV = exports.GO_PROXY_TIMEOUT_MS = exports.REGISTRY_URL = exports.SCAN_IGNORE = exports.MANIFEST_GLOBS = exports.MANIFEST = exports.SDK_LABEL = exports.ANDROID_MAVEN_COORDS = exports.IOS_SPM_PACKAGE_IDENTITIES = exports.IOS_SPM_REPO_URL_RE = exports.IOS_SPM_REPO_URLS = exports.SDK_PACKAGE = exports.LANG = void 0;
 /**
  * Shared identifiers, package names, registry URLs, and environment
  * variable names used across detectors and utilities.
@@ -20715,7 +20715,12 @@ exports.IOS_SPM_REPO_URLS = [
     "https://github.com/wingify/wingify-fme-ios-sdk",
 ];
 /** Matches Wingify FME iOS SPM repository URLs in manifests. */
-exports.IOS_SPM_REPO_URL_RE = /github\.com\/wingify\/(?:vwo|wingify)-fme-ios-sdk/i;
+exports.IOS_SPM_REPO_URL_RE = /github\.com[:/]wingify\/(?:vwo|wingify)-fme-ios-sdk/i;
+/** `Package.resolved` identity values for the iOS SDK (remoteSourceControl pins). */
+exports.IOS_SPM_PACKAGE_IDENTITIES = [
+    "vwo-fme-ios-sdk",
+    "wingify-fme-ios-sdk",
+];
 /** Maven coordinates for the Android SDK artifacts on Maven Central. */
 exports.ANDROID_MAVEN_COORDS = [
     { group: "com.vwo.sdk", artifact: exports.SDK_PACKAGE.ANDROID[0] },
@@ -20819,6 +20824,8 @@ exports.REGISTRY_URL = {
     IOS: [
         `https://trunk.cocoapods.org/api/v1/pods/${exports.SDK_PACKAGE.IOS[0]}`,
         `https://trunk.cocoapods.org/api/v1/pods/${exports.SDK_PACKAGE.IOS[1]}`,
+        "https://api.github.com/repos/wingify/vwo-fme-ios-sdk/releases/latest",
+        "https://api.github.com/repos/wingify/wingify-fme-ios-sdk/releases/latest",
     ],
     REACT_NATIVE: [
         `https://registry.npmjs.org/${exports.SDK_PACKAGE.REACT_NATIVE[0]}/latest`,
@@ -21693,6 +21700,13 @@ function findInPackageSwift(content) {
     }
     return null;
 }
+function isWingifyIosSpmPin(pin) {
+    const location = pin.location ?? "";
+    if (constants_1.IOS_SPM_REPO_URL_RE.test(location))
+        return true;
+    const identity = (pin.identity ?? "").toLowerCase();
+    return constants_1.IOS_SPM_PACKAGE_IDENTITIES.some((id) => identity === id);
+}
 function findInPackageResolved(content) {
     let parsed;
     try {
@@ -21705,16 +21719,69 @@ function findInPackageResolved(content) {
     if (!Array.isArray(pins))
         return null;
     for (const pin of pins) {
-        const location = pin?.location ?? "";
-        if (!constants_1.IOS_SPM_REPO_URL_RE.test(location))
+        const typed = pin;
+        if (!isWingifyIosSpmPin(typed))
             continue;
-        const state = pin?.state;
-        const version = state?.version?.trim();
+        const version = typed.state?.version?.trim();
         if (version) {
-            return { versionSpec: version, label: location };
+            const label = typed.location?.trim() || typed.identity || "vwo-fme-ios-sdk";
+            return { versionSpec: version, label };
         }
     }
     return null;
+}
+/** Xcode SPM lockfile beside an `.xcodeproj` (when Xcode has resolved packages). */
+function packageResolvedBesideXcodeproj(pbxprojFile) {
+    const xcodeprojDir = path_1.default.dirname(path_1.default.resolve(pbxprojFile));
+    if (!xcodeprojDir.endsWith(".xcodeproj"))
+        return null;
+    const resolvedPath = path_1.default.join(xcodeprojDir, "project.xcworkspace", "xcshareddata", "swiftpm", constants_1.MANIFEST.PACKAGE_RESOLVED);
+    return fs_1.default.existsSync(resolvedPath) ? resolvedPath : null;
+}
+function versionFromPackageResolvedAt(filePath) {
+    const content = fs_1.default.readFileSync(filePath, "utf8");
+    return findInPackageResolved(content)?.versionSpec ?? null;
+}
+function versionFromSpmLockfile(file, manifestDir, manifestBase) {
+    if (manifestBase === constants_1.MANIFEST.PBXPROJ) {
+        const beside = packageResolvedBesideXcodeproj(file);
+        if (beside)
+            return versionFromPackageResolvedAt(beside);
+    }
+    const sibling = path_1.default.join(manifestDir, constants_1.MANIFEST.PACKAGE_RESOLVED);
+    if (fs_1.default.existsSync(sibling)) {
+        return versionFromPackageResolvedAt(sibling);
+    }
+    return null;
+}
+function formatConstraintOnlyDisplay(constraintSpec) {
+    const minRange = constraintSpec.match(/^>=([\d.]+)\s*(<.+)$/);
+    if (minRange) {
+        return `${minRange[1]} minimum (SPM ${minRange[2].trim()})`;
+    }
+    const minOnly = constraintSpec.match(/^>=([\d.]+)$/);
+    if (minOnly) {
+        return `${minOnly[1]} minimum`;
+    }
+    return constraintSpec;
+}
+function formatSpmVersionDisplay(constraintSpec, lockedVersion) {
+    if (!lockedVersion)
+        return formatConstraintOnlyDisplay(constraintSpec);
+    const normalizedConstraint = constraintSpec.trim();
+    if (lockedVersion === normalizedConstraint ||
+        semverEquivalent(lockedVersion, normalizedConstraint)) {
+        return lockedVersion;
+    }
+    if (normalizedConstraint.includes("<") || normalizedConstraint.includes(">")) {
+        return `${lockedVersion} (SPM constraint ${normalizedConstraint})`;
+    }
+    return lockedVersion;
+}
+function semverEquivalent(a, b) {
+    const coercedA = a.match(/^[\d.]+/)?.[0];
+    const coercedB = b.match(/^[\d.]+/)?.[0];
+    return Boolean(coercedA && coercedB && coercedA === coercedB);
 }
 function findInPbxproj(content) {
     const refBlocks = content.matchAll(/repositoryURL\s*=\s*"([^"]+)";\s*requirement\s*=\s*\{([^}]*)\}/gs);
@@ -21768,6 +21835,11 @@ async function detectIos(file) {
     const content = fs_1.default.readFileSync(file, "utf8");
     const manifestDir = path_1.default.dirname(path_1.default.resolve(file));
     const base = path_1.default.basename(file);
+    // Report Xcode SPM pins via `project.pbxproj` (constraint + optional lockfile).
+    if (base === constants_1.MANIFEST.PACKAGE_RESOLVED &&
+        file.includes(`${path_1.default.sep}xcshareddata${path_1.default.sep}swiftpm${path_1.default.sep}`)) {
+        return;
+    }
     let resolved = null;
     if (base === "Podfile") {
         resolved = findInPodfile(content, manifestDir);
@@ -21786,21 +21858,29 @@ async function detectIos(file) {
     }
     if (!resolved)
         return;
+    const constraintSpec = resolved.versionSpec;
+    const lockedVersion = base === constants_1.MANIFEST.PBXPROJ || base === constants_1.MANIFEST.PACKAGE_SWIFT
+        ? versionFromSpmLockfile(file, manifestDir, base)
+        : null;
+    const displaySpec = formatSpmVersionDisplay(constraintSpec, lockedVersion);
+    const comparePrimary = lockedVersion ?? constraintSpec;
     const latest = await (0, fetchLatest_1.default)(constants_1.LANG.IOS);
     if (!latest) {
-        (0, reportSdk_1.logLatestFetchFailed)("iOS", resolved.versionSpec);
+        (0, reportSdk_1.logLatestFetchFailed)("iOS", displaySpec);
         return;
     }
-    if ((0, versionCompare_1.default)(resolved.versionSpec, latest)) {
+    const outdated = (0, versionCompare_1.default)(comparePrimary, latest) ||
+        (lockedVersion != null && (0, versionCompare_1.default)(constraintSpec, latest));
+    if (outdated) {
         await (0, reportSdk_1.reportOutdatedSdk)({
             sdkLabel: constants_1.SDK_LABEL.IOS,
             file,
-            currentVersion: resolved.versionSpec,
+            currentVersion: displaySpec,
             latest,
         });
         return;
     }
-    (0, reportSdk_1.logSdkUpToDate)("iOS", resolved.versionSpec);
+    (0, reportSdk_1.logSdkUpToDate)("iOS", displaySpec);
 }
 exports["default"] = detectIos;
 
@@ -22549,6 +22629,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+const path_1 = __importDefault(__nccwpck_require__(6928));
 const scanner_1 = __importDefault(__nccwpck_require__(8725));
 const node_1 = __importDefault(__nccwpck_require__(2081));
 const java_1 = __importDefault(__nccwpck_require__(3189));
@@ -22614,11 +22695,12 @@ async function run() {
         if (file.endsWith(constants_1.MANIFEST.LIBS_VERSIONS_TOML)) {
             await (0, android_1.default)(file);
         }
-        if (file.endsWith(`/${constants_1.MANIFEST.PODFILE}`) ||
-            file.endsWith(`/${constants_1.MANIFEST.PODFILE_LOCK}`) ||
-            file.endsWith(`/${constants_1.MANIFEST.PACKAGE_SWIFT}`) ||
-            file.endsWith(`/${constants_1.MANIFEST.PACKAGE_RESOLVED}`) ||
-            file.endsWith(`/${constants_1.MANIFEST.PBXPROJ}`)) {
+        const iosManifest = path_1.default.basename(file);
+        if (iosManifest === constants_1.MANIFEST.PODFILE ||
+            iosManifest === constants_1.MANIFEST.PODFILE_LOCK ||
+            iosManifest === constants_1.MANIFEST.PACKAGE_SWIFT ||
+            iosManifest === constants_1.MANIFEST.PACKAGE_RESOLVED ||
+            iosManifest === constants_1.MANIFEST.PBXPROJ) {
             await (0, ios_1.default)(file);
         }
     }
@@ -22670,7 +22752,7 @@ const constants_1 = __nccwpck_require__(6780);
  * - dotnet -> NuGet
  * - python -> PyPI
  * - android -> Maven Central (AAR artifacts)
- * - ios     -> CocoaPods trunk API (VWO-FME / Wingify-FME)
+ * - ios     -> CocoaPods trunk, GitHub releases (SPM source repos)
  * - react-native -> npm (vwo-fme-react-native-sdk / wingify-fme-react-native-sdk)
  * - react        -> npm (vwo-fme-react-sdk / wingify-fme-react-sdk)
  * - flutter      -> pub.dev (vwo_fme_flutter_sdk / wingify_fme_flutter_sdk)
@@ -22800,6 +22882,13 @@ async function fetchLatest(lang) {
             for (const url of constants_1.REGISTRY_URL.IOS) {
                 try {
                     const res = await axios_1.default.get(url);
+                    if (url.includes("api.github.com")) {
+                        const tag = res.data?.tag_name?.replace(/^v/i, "");
+                        if (tag && semver_1.default.coerce(tag)) {
+                            candidates.push(semver_1.default.coerce(tag).version);
+                        }
+                        continue;
+                    }
                     const versions = res.data?.versions;
                     if (!Array.isArray(versions) || versions.length === 0)
                         continue;

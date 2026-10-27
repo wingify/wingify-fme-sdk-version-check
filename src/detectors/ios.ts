@@ -24,8 +24,10 @@ import {
   reportOutdatedSdk,
 } from "../utils/reportSdk";
 import {
+  IOS_SPM_PACKAGE_IDENTITIES,
   IOS_SPM_REPO_URL_RE,
   LANG,
+  MANIFEST,
   SDK_LABEL,
   SDK_PACKAGE,
 } from "../constants";
@@ -153,6 +155,17 @@ function findInPackageSwift(content: string): ResolvedSdk | null {
   return null;
 }
 
+function isWingifyIosSpmPin(pin: {
+  location?: string;
+  identity?: string;
+}): boolean {
+  const location = pin.location ?? "";
+  if (IOS_SPM_REPO_URL_RE.test(location)) return true;
+
+  const identity = (pin.identity ?? "").toLowerCase();
+  return IOS_SPM_PACKAGE_IDENTITIES.some((id) => identity === id);
+}
+
 function findInPackageResolved(content: string): ResolvedSdk | null {
   let parsed: unknown;
   try {
@@ -165,17 +178,100 @@ function findInPackageResolved(content: string): ResolvedSdk | null {
   if (!Array.isArray(pins)) return null;
 
   for (const pin of pins) {
-    const location = (pin as { location?: string })?.location ?? "";
-    if (!IOS_SPM_REPO_URL_RE.test(location)) continue;
+    const typed = pin as {
+      location?: string;
+      identity?: string;
+      state?: { version?: string };
+    };
+    if (!isWingifyIosSpmPin(typed)) continue;
 
-    const state = (pin as { state?: { version?: string } })?.state;
-    const version = state?.version?.trim();
+    const version = typed.state?.version?.trim();
     if (version) {
-      return { versionSpec: version, label: location };
+      const label = typed.location?.trim() || typed.identity || "vwo-fme-ios-sdk";
+      return { versionSpec: version, label };
     }
   }
 
   return null;
+}
+
+/** Xcode SPM lockfile beside an `.xcodeproj` (when Xcode has resolved packages). */
+function packageResolvedBesideXcodeproj(pbxprojFile: string): string | null {
+  const xcodeprojDir = path.dirname(path.resolve(pbxprojFile));
+  if (!xcodeprojDir.endsWith(".xcodeproj")) return null;
+
+  const resolvedPath = path.join(
+    xcodeprojDir,
+    "project.xcworkspace",
+    "xcshareddata",
+    "swiftpm",
+    MANIFEST.PACKAGE_RESOLVED,
+  );
+  return fs.existsSync(resolvedPath) ? resolvedPath : null;
+}
+
+function versionFromPackageResolvedAt(filePath: string): string | null {
+  const content = fs.readFileSync(filePath, "utf8");
+  return findInPackageResolved(content)?.versionSpec ?? null;
+}
+
+function versionFromSpmLockfile(
+  file: string,
+  manifestDir: string,
+  manifestBase: string,
+): string | null {
+  if (manifestBase === MANIFEST.PBXPROJ) {
+    const beside = packageResolvedBesideXcodeproj(file);
+    if (beside) return versionFromPackageResolvedAt(beside);
+  }
+
+  const sibling = path.join(manifestDir, MANIFEST.PACKAGE_RESOLVED);
+  if (fs.existsSync(sibling)) {
+    return versionFromPackageResolvedAt(sibling);
+  }
+
+  return null;
+}
+
+function formatConstraintOnlyDisplay(constraintSpec: string): string {
+  const minRange = constraintSpec.match(/^>=([\d.]+)\s*(<.+)$/);
+  if (minRange) {
+    return `${minRange[1]} minimum (SPM ${minRange[2].trim()})`;
+  }
+
+  const minOnly = constraintSpec.match(/^>=([\d.]+)$/);
+  if (minOnly) {
+    return `${minOnly[1]} minimum`;
+  }
+
+  return constraintSpec;
+}
+
+function formatSpmVersionDisplay(
+  constraintSpec: string,
+  lockedVersion: string | null,
+): string {
+  if (!lockedVersion) return formatConstraintOnlyDisplay(constraintSpec);
+
+  const normalizedConstraint = constraintSpec.trim();
+  if (
+    lockedVersion === normalizedConstraint ||
+    semverEquivalent(lockedVersion, normalizedConstraint)
+  ) {
+    return lockedVersion;
+  }
+
+  if (normalizedConstraint.includes("<") || normalizedConstraint.includes(">")) {
+    return `${lockedVersion} (SPM constraint ${normalizedConstraint})`;
+  }
+
+  return lockedVersion;
+}
+
+function semverEquivalent(a: string, b: string): boolean {
+  const coercedA = a.match(/^[\d.]+/)?.[0];
+  const coercedB = b.match(/^[\d.]+/)?.[0];
+  return Boolean(coercedA && coercedB && coercedA === coercedB);
 }
 
 function findInPbxproj(content: string): ResolvedSdk | null {
@@ -239,6 +335,14 @@ async function detectIos(file: string): Promise<void> {
   const manifestDir = path.dirname(path.resolve(file));
   const base = path.basename(file);
 
+  // Report Xcode SPM pins via `project.pbxproj` (constraint + optional lockfile).
+  if (
+    base === MANIFEST.PACKAGE_RESOLVED &&
+    file.includes(`${path.sep}xcshareddata${path.sep}swiftpm${path.sep}`)
+  ) {
+    return;
+  }
+
   let resolved: ResolvedSdk | null = null;
 
   if (base === "Podfile") {
@@ -255,23 +359,35 @@ async function detectIos(file: string): Promise<void> {
 
   if (!resolved) return;
 
+  const constraintSpec = resolved.versionSpec;
+  const lockedVersion =
+    base === MANIFEST.PBXPROJ || base === MANIFEST.PACKAGE_SWIFT
+      ? versionFromSpmLockfile(file, manifestDir, base)
+      : null;
+  const displaySpec = formatSpmVersionDisplay(constraintSpec, lockedVersion);
+  const comparePrimary = lockedVersion ?? constraintSpec;
+
   const latest = await fetchLatest(LANG.IOS);
   if (!latest) {
-    logLatestFetchFailed("iOS", resolved.versionSpec);
+    logLatestFetchFailed("iOS", displaySpec);
     return;
   }
 
-  if (isOutdated(resolved.versionSpec, latest)) {
+  const outdated =
+    isOutdated(comparePrimary, latest) ||
+    (lockedVersion != null && isOutdated(constraintSpec, latest));
+
+  if (outdated) {
     await reportOutdatedSdk({
       sdkLabel: SDK_LABEL.IOS,
       file,
-      currentVersion: resolved.versionSpec,
+      currentVersion: displaySpec,
       latest,
     });
     return;
   }
 
-  logSdkUpToDate("iOS", resolved.versionSpec);
+  logSdkUpToDate("iOS", displaySpec);
 }
 
 export default detectIos;

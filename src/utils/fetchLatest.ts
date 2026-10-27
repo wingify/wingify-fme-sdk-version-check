@@ -36,7 +36,7 @@ import {
  * - dotnet -> NuGet
  * - python -> PyPI
  * - android -> Maven Central (AAR artifacts)
- * - ios     -> CocoaPods trunk API (VWO-FME / Wingify-FME)
+ * - ios     -> CocoaPods trunk, GitHub releases (SPM source repos)
  * - react-native -> npm (vwo-fme-react-native-sdk / wingify-fme-react-native-sdk)
  * - react        -> npm (vwo-fme-react-sdk / wingify-fme-react-sdk)
  * - flutter      -> pub.dev (vwo_fme_flutter_sdk / wingify_fme_flutter_sdk)
@@ -167,6 +167,18 @@ async function fetchLatest(lang: Lang): Promise<string | null> {
       for (const url of REGISTRY_URL.IOS) {
         try {
           const res = await axios.get(url);
+
+          if (url.includes("api.github.com")) {
+            const tag = (res.data?.tag_name as string | undefined)?.replace(
+              /^v/i,
+              "",
+            );
+            if (tag && semver.coerce(tag)) {
+              candidates.push(semver.coerce(tag)!.version);
+            }
+            continue;
+          }
+
           const versions = res.data?.versions as { name: string }[] | undefined;
           if (!Array.isArray(versions) || versions.length === 0) continue;
 

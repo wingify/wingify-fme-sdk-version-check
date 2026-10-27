@@ -65,7 +65,13 @@ export const IOS_SPM_REPO_URLS = [
 
 /** Matches Wingify FME iOS SPM repository URLs in manifests. */
 export const IOS_SPM_REPO_URL_RE =
-  /github\.com\/wingify\/(?:vwo|wingify)-fme-ios-sdk/i;
+  /github\.com[:/]wingify\/(?:vwo|wingify)-fme-ios-sdk/i;
+
+/** `Package.resolved` identity values for the iOS SDK (remoteSourceControl pins). */
+export const IOS_SPM_PACKAGE_IDENTITIES = [
+  "vwo-fme-ios-sdk",
+  "wingify-fme-ios-sdk",
+] as const;
 
 /** Maven coordinates for the Android SDK artifacts on Maven Central. */
 export const ANDROID_MAVEN_COORDS = [
@@ -175,6 +181,8 @@ export const REGISTRY_URL = {
   IOS: [
     `https://trunk.cocoapods.org/api/v1/pods/${SDK_PACKAGE.IOS[0]}`,
     `https://trunk.cocoapods.org/api/v1/pods/${SDK_PACKAGE.IOS[1]}`,
+    "https://api.github.com/repos/wingify/vwo-fme-ios-sdk/releases/latest",
+    "https://api.github.com/repos/wingify/wingify-fme-ios-sdk/releases/latest",
   ],
   REACT_NATIVE: [
     `https://registry.npmjs.org/${SDK_PACKAGE.REACT_NATIVE[0]}/latest`,

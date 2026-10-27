@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import path from "path";
 import scanRepo from "./utils/scanner";
 import detectNode from "./detectors/node";
 import detectJava from "./detectors/java";
@@ -90,12 +91,13 @@ async function run(): Promise<void> {
       await detectAndroid(file);
     }
 
+    const iosManifest = path.basename(file);
     if (
-      file.endsWith(`/${MANIFEST.PODFILE}`) ||
-      file.endsWith(`/${MANIFEST.PODFILE_LOCK}`) ||
-      file.endsWith(`/${MANIFEST.PACKAGE_SWIFT}`) ||
-      file.endsWith(`/${MANIFEST.PACKAGE_RESOLVED}`) ||
-      file.endsWith(`/${MANIFEST.PBXPROJ}`)
+      iosManifest === MANIFEST.PODFILE ||
+      iosManifest === MANIFEST.PODFILE_LOCK ||
+      iosManifest === MANIFEST.PACKAGE_SWIFT ||
+      iosManifest === MANIFEST.PACKAGE_RESOLVED ||
+      iosManifest === MANIFEST.PBXPROJ
     ) {
       await detectIos(file);
     }
