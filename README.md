@@ -16,13 +16,14 @@ The action supports both VWO and Wingify branded SDK packages:
 - **Android**: `com.vwo.sdk:vwo-fme-android-sdk`, `com.wingify.sdk:wingify-fme-android-sdk`
 - **iOS**: CocoaPods `VWO-FME`, `Wingify-FME`; Swift Package Manager `https://github.com/wingify/vwo-fme-ios-sdk`
 - **React Native**: `vwo-fme-react-native-sdk`, `wingify-fme-react-native-sdk` (via `package.json` / npm)
+- **Flutter**: `vwo_fme_flutter_sdk`, `wingify_fme_flutter_sdk` (via `pubspec.yaml` / pub.dev)
 
 ### How it works
 
 - **Scans** the repository for common manifest files:
-  - `package.json`, `pom.xml`, `composer.json`, `go.mod`, `Gemfile`, `*.csproj`, `requirements.txt`, `build.gradle`, `build.gradle.kts`, `libs.versions.toml`, `Podfile`, `Podfile.lock`, `Package.swift`, `Package.resolved`, `project.pbxproj`
+  - `package.json`, `pom.xml`, `composer.json`, `go.mod`, `Gemfile`, `*.csproj`, `requirements.txt`, `build.gradle`, `build.gradle.kts`, `libs.versions.toml`, `pubspec.yaml`, `Podfile`, `Podfile.lock`, `Package.swift`, `Package.resolved`, `project.pbxproj`
 - **Detects** whether any of the supported Wingify SDKs (both VWO and Wingify branded) are declared.
-- **Fetches** the latest version of each SDK from the matching package registry (npm, Maven Central, Packagist, Go module proxy, RubyGems, NuGet, PyPI, CocoaPods trunk). Android artifacts are resolved from Maven Central metadata. iOS CocoaPods releases use the [CocoaPods trunk API](https://trunk.cocoapods.org/api/v1/pods/VWO-FME) for `VWO-FME` and [Wingify-FME](https://trunk.cocoapods.org/api/v1/pods/Wingify-FME); the highest semver across both pods is used as the latest iOS version. React Native uses the [npm registry](https://registry.npmjs.org/vwo-fme-react-native-sdk/latest) for `vwo-fme-react-native-sdk` and `wingify-fme-react-native-sdk`.
+- **Fetches** the latest version of each SDK from the matching package registry (npm, Maven Central, Packagist, Go module proxy, RubyGems, NuGet, PyPI, CocoaPods trunk, pub.dev). Android artifacts are resolved from Maven Central metadata. iOS CocoaPods releases use the [CocoaPods trunk API](https://trunk.cocoapods.org/api/v1/pods/VWO-FME) for `VWO-FME` and [Wingify-FME](https://trunk.cocoapods.org/api/v1/pods/Wingify-FME); the highest semver across both pods is used as the latest iOS version. React Native uses the [npm registry](https://registry.npmjs.org/vwo-fme-react-native-sdk/latest) for `vwo-fme-react-native-sdk` and `wingify-fme-react-native-sdk`. Flutter uses the [pub.dev API](https://pub.dev/api/packages/vwo_fme_flutter_sdk) for `vwo_fme_flutter_sdk` and [wingify_fme_flutter_sdk](https://pub.dev/api/packages/wingify_fme_flutter_sdk); the highest semver across both packages is used as the latest Flutter version.
 - **Compares** the current version or version range in the repo with the latest release.
 - **Logs** whether each detected SDK is up to date or outdated.
 - **Notifies** Slack when an SDK is outdated (optional; see environment variables below).
@@ -153,6 +154,21 @@ or
 }
 ```
 
+**Flutter** (`pubspec.yaml`):
+
+```yaml
+dependencies:
+  vwo_fme_flutter_sdk: ^1.56.0
+```
+
+or
+
+```yaml
+dependencies:
+  wingify_fme_flutter_sdk:
+    version: ^1.56.0
+```
+
 ### Environment variables
 
 - **`SLACK_NOTIFICATIONS_BOT_TOKEN`** (or `SLACK_BOT_TOKEN`): Slack bot token used to send notifications via `chat.postMessage`.
@@ -169,6 +185,7 @@ When an SDK is **up to date**, the action prints a line like:
 - `Java SDK up to date (1.3.0)`
 - `iOS SDK up to date (~> 1.66)`
 - `React Native SDK up to date (^1.55.0)`
+- `Flutter SDK up to date (^1.56.0)`
 
 When an SDK is **outdated**, it prints a Slack-formatted message that includes the file, the current constraint, the latest version, and a link to the workflow run. That same message is posted to Slack when credentials are configured.
 
@@ -207,6 +224,9 @@ When an SDK is **outdated**, it prints a Slack-formatted message that includes t
     compared as fixed versions.
 - **React Native (`package.json`)**:
   - npm semver ranges follow the same rules as Node.
+- **Flutter (`pubspec.yaml`)**:
+  - Pub semver ranges (`^`, `>=`, etc.) follow the same rules as npm.
+  - Path, git, and SDK-only dependencies without a version constraint are skipped.
 
 ### Local development
 

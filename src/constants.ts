@@ -31,6 +31,7 @@ export const LANG = {
   ANDROID: "android",
   IOS: "ios",
   REACT_NATIVE: "react-native",
+  FLUTTER: "flutter",
 } as const;
 
 export type Lang = (typeof LANG)[keyof typeof LANG];
@@ -50,6 +51,8 @@ export const SDK_PACKAGE = {
   IOS: ["VWO-FME", "Wingify-FME"],
   /** npm package names for the React Native SDK. */
   REACT_NATIVE: ["vwo-fme-react-native-sdk", "wingify-fme-react-native-sdk"],
+  /** pub.dev package names for the Flutter SDK. */
+  FLUTTER: ["vwo_fme_flutter_sdk", "wingify_fme_flutter_sdk"],
 } as const;
 
 /** Swift Package Manager repository URLs for the iOS SDK. */
@@ -80,6 +83,7 @@ export const SDK_LABEL = {
   ANDROID: "Android",
   IOS: "iOS",
   REACT_NATIVE: "React Native",
+  FLUTTER: "Flutter",
 } as const;
 
 /** Manifest file names / suffixes discovered by the scanner. */
@@ -99,6 +103,7 @@ export const MANIFEST = {
   PACKAGE_SWIFT: "Package.swift",
   PACKAGE_RESOLVED: "Package.resolved",
   PBXPROJ: "project.pbxproj",
+  PUBSPEC_YAML: "pubspec.yaml",
 } as const;
 
 /** Glob patterns used to locate manifests across the repository. */
@@ -119,6 +124,7 @@ export const MANIFEST_GLOBS: string[] = [
   `**/${MANIFEST.PACKAGE_RESOLVED}`,
   `**/*/*.xcodeproj/${MANIFEST.PBXPROJ}`,
   `**/*.xcodeproj/${MANIFEST.PBXPROJ}`,
+  `**/${MANIFEST.PUBSPEC_YAML}`,
 ];
 
 /** Directories skipped while scanning for manifests. */
@@ -170,6 +176,10 @@ export const REGISTRY_URL = {
   REACT_NATIVE: [
     `https://registry.npmjs.org/${SDK_PACKAGE.REACT_NATIVE[0]}/latest`,
     `https://registry.npmjs.org/${SDK_PACKAGE.REACT_NATIVE[1]}/latest`,
+  ],
+  FLUTTER: [
+    `https://pub.dev/api/packages/${SDK_PACKAGE.FLUTTER[0]}`,
+    `https://pub.dev/api/packages/${SDK_PACKAGE.FLUTTER[1]}`,
   ],
 } as const;
 

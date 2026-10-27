@@ -20687,6 +20687,7 @@ exports.LANG = {
     ANDROID: "android",
     IOS: "ios",
     REACT_NATIVE: "react-native",
+    FLUTTER: "flutter",
 };
 /** Package / artifact names as they appear in each ecosystem. */
 exports.SDK_PACKAGE = {
@@ -20703,6 +20704,8 @@ exports.SDK_PACKAGE = {
     IOS: ["VWO-FME", "Wingify-FME"],
     /** npm package names for the React Native SDK. */
     REACT_NATIVE: ["vwo-fme-react-native-sdk", "wingify-fme-react-native-sdk"],
+    /** pub.dev package names for the Flutter SDK. */
+    FLUTTER: ["vwo_fme_flutter_sdk", "wingify_fme_flutter_sdk"],
 };
 /** Swift Package Manager repository URLs for the iOS SDK. */
 exports.IOS_SPM_REPO_URLS = [
@@ -20728,6 +20731,7 @@ exports.SDK_LABEL = {
     ANDROID: "Android",
     IOS: "iOS",
     REACT_NATIVE: "React Native",
+    FLUTTER: "Flutter",
 };
 /** Manifest file names / suffixes discovered by the scanner. */
 exports.MANIFEST = {
@@ -20746,6 +20750,7 @@ exports.MANIFEST = {
     PACKAGE_SWIFT: "Package.swift",
     PACKAGE_RESOLVED: "Package.resolved",
     PBXPROJ: "project.pbxproj",
+    PUBSPEC_YAML: "pubspec.yaml",
 };
 /** Glob patterns used to locate manifests across the repository. */
 exports.MANIFEST_GLOBS = [
@@ -20765,6 +20770,7 @@ exports.MANIFEST_GLOBS = [
     `**/${exports.MANIFEST.PACKAGE_RESOLVED}`,
     `**/*/*.xcodeproj/${exports.MANIFEST.PBXPROJ}`,
     `**/*.xcodeproj/${exports.MANIFEST.PBXPROJ}`,
+    `**/${exports.MANIFEST.PUBSPEC_YAML}`,
 ];
 /** Directories skipped while scanning for manifests. */
 exports.SCAN_IGNORE = [
@@ -20814,6 +20820,10 @@ exports.REGISTRY_URL = {
     REACT_NATIVE: [
         `https://registry.npmjs.org/${exports.SDK_PACKAGE.REACT_NATIVE[0]}/latest`,
         `https://registry.npmjs.org/${exports.SDK_PACKAGE.REACT_NATIVE[1]}/latest`,
+    ],
+    FLUTTER: [
+        `https://pub.dev/api/packages/${exports.SDK_PACKAGE.FLUTTER[0]}`,
+        `https://pub.dev/api/packages/${exports.SDK_PACKAGE.FLUTTER[1]}`,
     ],
 };
 /** Timeout applied only to the Go module proxy request. */
@@ -21330,6 +21340,148 @@ async function detectDotnet(file) {
     (0, reportSdk_1.logSdkUpToDate)(".NET", versionSpec);
 }
 exports["default"] = detectDotnet;
+
+
+/***/ }),
+
+/***/ 7803:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+/**
+ * Copyright 2026 Wingify Software Pvt. Ltd.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const fs_1 = __importDefault(__nccwpck_require__(9896));
+const fetchLatest_1 = __importDefault(__nccwpck_require__(8588));
+const versionCompare_1 = __importDefault(__nccwpck_require__(5492));
+const reportSdk_1 = __nccwpck_require__(3369);
+const constants_1 = __nccwpck_require__(6780);
+const PUBSPEC_DEP_SECTIONS = [
+    "dependencies",
+    "dev_dependencies",
+    "dependency_overrides",
+];
+/** Strip YAML comments from a line (best-effort). */
+function stripYamlComment(line) {
+    const hash = line.indexOf("#");
+    if (hash === -1)
+        return line;
+    return line.slice(0, hash);
+}
+/**
+ * Parse `dependencies`, `dev_dependencies`, and `dependency_overrides` from
+ * `pubspec.yaml`.
+ */
+function parsePubspecDependencySections(content) {
+    const deps = {};
+    const lines = content.split(/\r?\n/);
+    let section = null;
+    let currentPkg = null;
+    for (const rawLine of lines) {
+        const line = stripYamlComment(rawLine);
+        const trimmed = line.trim();
+        if (!trimmed)
+            continue;
+        const topLevel = /^([a-z_][\w]*):\s*(.*)$/.exec(line);
+        if (topLevel && !/^\s/.test(line)) {
+            section = topLevel[1];
+            currentPkg = null;
+            continue;
+        }
+        if (!section ||
+            !PUBSPEC_DEP_SECTIONS.includes(section)) {
+            continue;
+        }
+        const pkgInline = /^  ([a-z][a-z0-9_]*):\s*(.+)$/.exec(line);
+        if (pkgInline) {
+            currentPkg = pkgInline[1];
+            const value = pkgInline[2].trim();
+            if (value) {
+                deps[currentPkg] = value.replace(/^["']|["']$/g, "").trim();
+                currentPkg = null;
+            }
+            continue;
+        }
+        const pkgBlockStart = /^  ([a-z][a-z0-9_]*):\s*$/.exec(line);
+        if (pkgBlockStart) {
+            currentPkg = pkgBlockStart[1];
+            continue;
+        }
+        if (currentPkg) {
+            const versionLine = /^    version:\s*(.+)$/.exec(line);
+            if (versionLine) {
+                deps[currentPkg] = versionLine[1]
+                    .trim()
+                    .replace(/^["']|["']$/g, "")
+                    .trim();
+                currentPkg = null;
+            }
+        }
+    }
+    return deps;
+}
+function findInPubspecYaml(content) {
+    const deps = parsePubspecDependencySections(content);
+    for (const packageName of constants_1.SDK_PACKAGE.FLUTTER) {
+        const versionSpec = deps[packageName];
+        if (!versionSpec)
+            continue;
+        if (versionSpec === "sdk" ||
+            versionSpec.startsWith("path:") ||
+            versionSpec.startsWith("git:") ||
+            versionSpec === "{") {
+            continue;
+        }
+        return versionSpec;
+    }
+    return null;
+}
+/**
+ * Inspect `pubspec.yaml` for Wingify FME Flutter SDK dependencies and compare
+ * them with pub.dev releases.
+ */
+async function detectFlutter(file) {
+    if (!file.endsWith("pubspec.yaml"))
+        return;
+    const content = fs_1.default.readFileSync(file, "utf8");
+    const versionSpec = findInPubspecYaml(content);
+    if (!versionSpec)
+        return;
+    const displaySpec = versionSpec.replace(/^v/i, "").trim();
+    const latest = await (0, fetchLatest_1.default)(constants_1.LANG.FLUTTER);
+    if (!latest) {
+        (0, reportSdk_1.logLatestFetchFailed)("Flutter", displaySpec);
+        return;
+    }
+    if ((0, versionCompare_1.default)(displaySpec, latest)) {
+        await (0, reportSdk_1.reportOutdatedSdk)({
+            sdkLabel: constants_1.SDK_LABEL.FLUTTER,
+            file,
+            currentVersion: displaySpec,
+            latest,
+        });
+        return;
+    }
+    (0, reportSdk_1.logSdkUpToDate)("Flutter", displaySpec);
+}
+exports["default"] = detectFlutter;
 
 
 /***/ }),
@@ -22153,6 +22305,7 @@ const python_1 = __importDefault(__nccwpck_require__(5099));
 const android_1 = __importDefault(__nccwpck_require__(1122));
 const ios_1 = __importDefault(__nccwpck_require__(9016));
 const reactNative_1 = __importDefault(__nccwpck_require__(3173));
+const flutter_1 = __importDefault(__nccwpck_require__(7803));
 const constants_1 = __nccwpck_require__(6780);
 /**
  * Entrypoint for the GitHub Action.
@@ -22197,6 +22350,9 @@ async function run() {
         }
         else if (file.endsWith(constants_1.MANIFEST.BUILD_GRADLE)) {
             await (0, android_1.default)(file);
+        }
+        if (file.endsWith(constants_1.MANIFEST.PUBSPEC_YAML)) {
+            await (0, flutter_1.default)(file);
         }
         if (file.endsWith(constants_1.MANIFEST.LIBS_VERSIONS_TOML)) {
             await (0, android_1.default)(file);
@@ -22259,6 +22415,7 @@ const constants_1 = __nccwpck_require__(6780);
  * - android -> Maven Central (AAR artifacts)
  * - ios     -> CocoaPods trunk API (VWO-FME / Wingify-FME)
  * - react-native -> npm (vwo-fme-react-native-sdk / wingify-fme-react-native-sdk)
+ * - flutter    -> pub.dev (vwo_fme_flutter_sdk / wingify_fme_flutter_sdk)
  *
  * Returns `null` when the SDK is unknown or the registry query fails.
  */
@@ -22427,6 +22584,24 @@ async function fetchLatest(lang) {
                 }
             }
             return null;
+        }
+        if (lang === constants_1.LANG.FLUTTER) {
+            const candidates = [];
+            for (const url of constants_1.REGISTRY_URL.FLUTTER) {
+                try {
+                    const res = await axios_1.default.get(url);
+                    const version = res.data?.latest?.version;
+                    if (version && semver_1.default.coerce(version)) {
+                        candidates.push(version);
+                    }
+                }
+                catch {
+                    continue;
+                }
+            }
+            if (candidates.length === 0)
+                return null;
+            return candidates.sort((a, b) => semver_1.default.compare(semver_1.default.coerce(a), semver_1.default.coerce(b)))[candidates.length - 1];
         }
         return null;
     }

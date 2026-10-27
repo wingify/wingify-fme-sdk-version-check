@@ -25,6 +25,7 @@ import detectPython from "./detectors/python";
 import detectAndroid from "./detectors/android";
 import detectIos from "./detectors/ios";
 import detectReactNative from "./detectors/reactNative";
+import detectFlutter from "./detectors/flutter";
 import { ENV, MANIFEST } from "./constants";
 
 /**
@@ -77,6 +78,10 @@ async function run(): Promise<void> {
       await detectAndroid(file);
     } else if (file.endsWith(MANIFEST.BUILD_GRADLE)) {
       await detectAndroid(file);
+    }
+
+    if (file.endsWith(MANIFEST.PUBSPEC_YAML)) {
+      await detectFlutter(file);
     }
 
     if (file.endsWith(MANIFEST.LIBS_VERSIONS_TOML)) {

@@ -38,6 +38,7 @@ import {
  * - android -> Maven Central (AAR artifacts)
  * - ios     -> CocoaPods trunk API (VWO-FME / Wingify-FME)
  * - react-native -> npm (vwo-fme-react-native-sdk / wingify-fme-react-native-sdk)
+ * - flutter    -> pub.dev (vwo_fme_flutter_sdk / wingify_fme_flutter_sdk)
  *
  * Returns `null` when the SDK is unknown or the registry query fails.
  */
@@ -214,6 +215,27 @@ async function fetchLatest(lang: Lang): Promise<string | null> {
         }
       }
       return null;
+    }
+
+    if (lang === LANG.FLUTTER) {
+      const candidates: string[] = [];
+      for (const url of REGISTRY_URL.FLUTTER) {
+        try {
+          const res = await axios.get(url);
+          const version = res.data?.latest?.version as string | undefined;
+          if (version && semver.coerce(version)) {
+            candidates.push(version);
+          }
+        } catch {
+          continue;
+        }
+      }
+
+      if (candidates.length === 0) return null;
+
+      return candidates.sort((a, b) =>
+        semver.compare(semver.coerce(a)!, semver.coerce(b)!),
+      )[candidates.length - 1];
     }
 
     return null;
