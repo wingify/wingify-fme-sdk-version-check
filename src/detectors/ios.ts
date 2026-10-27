@@ -40,13 +40,17 @@ type PackageJsonDeps = {
   peerDependencies?: Record<string, string>;
 };
 
-function packageJsonDeclaresReactNativeSdk(packageJsonPath: string): boolean {
-  let pkg: PackageJsonDeps;
+function readPackageJson(packageJsonPath: string): PackageJsonDeps | null {
   try {
-    pkg = JSON.parse(fs.readFileSync(packageJsonPath, "utf8")) as PackageJsonDeps;
+    return JSON.parse(fs.readFileSync(packageJsonPath, "utf8")) as PackageJsonDeps;
   } catch {
-    return false;
+    return null;
   }
+}
+
+function packageJsonDeclaresReactNativeSdk(packageJsonPath: string): boolean {
+  const pkg = readPackageJson(packageJsonPath);
+  if (!pkg) return false;
 
   for (const packageName of SDK_PACKAGE.REACT_NATIVE) {
     if (
@@ -61,25 +65,118 @@ function packageJsonDeclaresReactNativeSdk(packageJsonPath: string): boolean {
   return false;
 }
 
+/** Standard React Native app layout (`package.json` + `ios/` sibling folder). */
+function packageJsonIsReactNativeApp(packageJsonPath: string): boolean {
+  const pkg = readPackageJson(packageJsonPath);
+  if (!pkg) return false;
+
+  return Boolean(
+    pkg.dependencies?.["react-native"] ||
+      pkg.devDependencies?.["react-native"],
+  );
+}
+
+/** Whether `manifestPath` is part of the iOS native tree for a React Native app root. */
+function isManifestInReactNativeIosTree(
+  manifestPath: string,
+  rnProjectRoot: string,
+): boolean {
+  const iosDir = path.join(rnProjectRoot, "ios");
+  if (
+    manifestPath === iosDir ||
+    manifestPath.startsWith(`${iosDir}${path.sep}`)
+  ) {
+    return true;
+  }
+
+  // Some apps keep `package.json` inside `ios/` next to `Podfile.lock`.
+  if (path.basename(rnProjectRoot) === "ios") {
+    return (
+      manifestPath === rnProjectRoot ||
+      manifestPath.startsWith(`${rnProjectRoot}${path.sep}`)
+    );
+  }
+
+  return false;
+}
+
+function isCocoaPodsManifestBase(base: string): boolean {
+  return base === MANIFEST.PODFILE || base === MANIFEST.PODFILE_LOCK;
+}
+
+/**
+ * CocoaPods manifests generated for React Native (lockfile lists the RN pod;
+ * `Podfile` often only calls `use_react_native!`).
+ */
+function isReactNativeCocoaPodsManifestContent(
+  content: string,
+  base: string,
+): boolean {
+  if (base !== MANIFEST.PODFILE && base !== MANIFEST.PODFILE_LOCK) {
+    return false;
+  }
+
+  for (const packageName of SDK_PACKAGE.REACT_NATIVE) {
+    if (content.includes(packageName)) {
+      return true;
+    }
+  }
+
+  if (
+    base === MANIFEST.PODFILE &&
+    /\buse_react_native!|\bprepare_react_native_project!/.test(content)
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
 /**
  * React Native apps ship native iOS deps under `{app}/ios/`; version checks for
  * those projects use `package.json` only (see `detectReactNative`).
  */
-function isReactNativeIosManifest(file: string): boolean {
+function isReactNativeIosManifest(file: string, content?: string): boolean {
   const manifestPath = path.resolve(file);
-  let dir = path.dirname(manifestPath);
-  const repoRoot = path.resolve(".");
+  const manifestDir = path.dirname(manifestPath);
+  const base = path.basename(file);
 
-  for (;;) {
-    const packageJsonPath = path.join(dir, MANIFEST.PACKAGE_JSON);
-    if (fs.existsSync(packageJsonPath) && packageJsonDeclaresReactNativeSdk(packageJsonPath)) {
-      const iosDir = path.join(dir, "ios");
+  // React Native handling applies only to CocoaPods files, not SPM / Xcode manifests.
+  if (!isCocoaPodsManifestBase(base)) {
+    return false;
+  }
+
+  if (
+    content &&
+    isReactNativeCocoaPodsManifestContent(content, base)
+  ) {
+    return true;
+  }
+
+  // e.g. `react-native/package.json` + `react-native/ios/Podfile.lock`
+  if (path.basename(manifestDir) === "ios") {
+    const appPackageJson = path.join(path.dirname(manifestDir), MANIFEST.PACKAGE_JSON);
+    if (fs.existsSync(appPackageJson)) {
       if (
-        manifestPath === iosDir ||
-        manifestPath.startsWith(`${iosDir}${path.sep}`)
+        packageJsonIsReactNativeApp(appPackageJson) ||
+        packageJsonDeclaresReactNativeSdk(appPackageJson)
       ) {
         return true;
       }
+    }
+  }
+
+  let dir = manifestDir;
+  const repoRoot = path.resolve(process.cwd());
+
+  for (;;) {
+    const packageJsonPath = path.join(dir, MANIFEST.PACKAGE_JSON);
+    if (
+      fs.existsSync(packageJsonPath) &&
+      packageJsonDeclaresReactNativeSdk(packageJsonPath) &&
+      isManifestInReactNativeIosTree(manifestPath, dir)
+    ) {
+      return true;
     }
 
     if (dir === repoRoot) break;
@@ -416,9 +513,9 @@ function findInPbxproj(content: string): ResolvedSdk | null {
  * and compare them with CocoaPods trunk metadata.
  */
 async function detectIos(file: string): Promise<void> {
-  if (isReactNativeIosManifest(file)) return;
-
   const content = fs.readFileSync(file, "utf8");
+  if (isReactNativeIosManifest(file, content)) return;
+
   const manifestDir = path.dirname(path.resolve(file));
   const base = path.basename(file);
 
