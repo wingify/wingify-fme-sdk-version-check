@@ -21612,6 +21612,49 @@ const fetchLatest_1 = __importDefault(__nccwpck_require__(8588));
 const versionCompare_1 = __importDefault(__nccwpck_require__(5492));
 const reportSdk_1 = __nccwpck_require__(3369);
 const constants_1 = __nccwpck_require__(6780);
+function packageJsonDeclaresReactNativeSdk(packageJsonPath) {
+    let pkg;
+    try {
+        pkg = JSON.parse(fs_1.default.readFileSync(packageJsonPath, "utf8"));
+    }
+    catch {
+        return false;
+    }
+    for (const packageName of constants_1.SDK_PACKAGE.REACT_NATIVE) {
+        if (pkg.dependencies?.[packageName] ||
+            pkg.devDependencies?.[packageName] ||
+            pkg.peerDependencies?.[packageName]) {
+            return true;
+        }
+    }
+    return false;
+}
+/**
+ * React Native apps ship native iOS deps under `{app}/ios/`; version checks for
+ * those projects use `package.json` only (see `detectReactNative`).
+ */
+function isReactNativeIosManifest(file) {
+    const manifestPath = path_1.default.resolve(file);
+    let dir = path_1.default.dirname(manifestPath);
+    const repoRoot = path_1.default.resolve(".");
+    for (;;) {
+        const packageJsonPath = path_1.default.join(dir, constants_1.MANIFEST.PACKAGE_JSON);
+        if (fs_1.default.existsSync(packageJsonPath) && packageJsonDeclaresReactNativeSdk(packageJsonPath)) {
+            const iosDir = path_1.default.join(dir, "ios");
+            if (manifestPath === iosDir ||
+                manifestPath.startsWith(`${iosDir}${path_1.default.sep}`)) {
+                return true;
+            }
+        }
+        if (dir === repoRoot)
+            break;
+        const parent = path_1.default.dirname(dir);
+        if (parent === dir)
+            break;
+        dir = parent;
+    }
+    return false;
+}
 function escapeRegExp(value) {
     return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -21853,6 +21896,8 @@ function findInPbxproj(content) {
  * and compare them with CocoaPods trunk metadata.
  */
 async function detectIos(file) {
+    if (isReactNativeIosManifest(file))
+        return;
     const content = fs_1.default.readFileSync(file, "utf8");
     const manifestDir = path_1.default.dirname(path_1.default.resolve(file));
     const base = path_1.default.basename(file);

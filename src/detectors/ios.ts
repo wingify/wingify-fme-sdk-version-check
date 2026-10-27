@@ -34,6 +34,63 @@ import {
 
 type ResolvedSdk = { versionSpec: string; label: string };
 
+type PackageJsonDeps = {
+  dependencies?: Record<string, string>;
+  devDependencies?: Record<string, string>;
+  peerDependencies?: Record<string, string>;
+};
+
+function packageJsonDeclaresReactNativeSdk(packageJsonPath: string): boolean {
+  let pkg: PackageJsonDeps;
+  try {
+    pkg = JSON.parse(fs.readFileSync(packageJsonPath, "utf8")) as PackageJsonDeps;
+  } catch {
+    return false;
+  }
+
+  for (const packageName of SDK_PACKAGE.REACT_NATIVE) {
+    if (
+      pkg.dependencies?.[packageName] ||
+      pkg.devDependencies?.[packageName] ||
+      pkg.peerDependencies?.[packageName]
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
+ * React Native apps ship native iOS deps under `{app}/ios/`; version checks for
+ * those projects use `package.json` only (see `detectReactNative`).
+ */
+function isReactNativeIosManifest(file: string): boolean {
+  const manifestPath = path.resolve(file);
+  let dir = path.dirname(manifestPath);
+  const repoRoot = path.resolve(".");
+
+  for (;;) {
+    const packageJsonPath = path.join(dir, MANIFEST.PACKAGE_JSON);
+    if (fs.existsSync(packageJsonPath) && packageJsonDeclaresReactNativeSdk(packageJsonPath)) {
+      const iosDir = path.join(dir, "ios");
+      if (
+        manifestPath === iosDir ||
+        manifestPath.startsWith(`${iosDir}${path.sep}`)
+      ) {
+        return true;
+      }
+    }
+
+    if (dir === repoRoot) break;
+    const parent = path.dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+
+  return false;
+}
+
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -359,6 +416,8 @@ function findInPbxproj(content: string): ResolvedSdk | null {
  * and compare them with CocoaPods trunk metadata.
  */
 async function detectIos(file: string): Promise<void> {
+  if (isReactNativeIosManifest(file)) return;
+
   const content = fs.readFileSync(file, "utf8");
   const manifestDir = path.dirname(path.resolve(file));
   const base = path.basename(file);
