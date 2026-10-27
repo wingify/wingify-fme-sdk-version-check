@@ -287,6 +287,9 @@ When an SDK is **outdated**, it prints a Slack-formatted message that includes t
   - Git, file, and `workspace:` specs without a registry version are skipped.
 - **Flutter (`pubspec.yaml`)**:
   - Pub semver ranges (`^`, `>=`, etc.) follow the same rules as npm.
+  - When `pubspec.lock` is present beside the manifest, the **locked** package
+    version is compared to pub.dev (so `^1.6.0` with lock `1.6.0` is flagged
+    when a newer release exists).
   - Path, git, and SDK-only dependencies without a version constraint are skipped.
 
 ### Local development
