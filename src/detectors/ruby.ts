@@ -24,11 +24,7 @@ import {
 } from "../utils/reportSdk";
 import { LANG, SDK_LABEL, SDK_PACKAGE } from "../constants";
 
-/**
- * Inspect a `Gemfile` and, if `vwo-fme-ruby-sdk` or `wingify-fme-ruby-sdk` is declared,
- * compare the Ruby-style version constraint against the latest
- * RubyGems release.
- */
+/** Scans `Gemfile` for the FME Ruby SDK, compares to RubyGems latest, and reports. */
 async function detectRuby(file: string): Promise<void> {
   const gemfile = fs.readFileSync(file, "utf8");
 

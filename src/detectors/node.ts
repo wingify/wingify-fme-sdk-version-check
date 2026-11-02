@@ -24,10 +24,7 @@ import {
 } from "../utils/reportSdk";
 import { LANG, SDK_LABEL, SDK_PACKAGE } from "../constants";
 
-/**
- * Inspect a `package.json` file and, if `vwo-fme-node-sdk` or `wingify-fme-node-sdk` is present,
- * compare the declared version/range against the latest npm release.
- */
+/** Scans `package.json` for the FME Node SDK, compares to npm latest, and reports. */
 async function detectNode(file: string): Promise<void> {
   const pkgRaw = fs.readFileSync(file, "utf8");
   const pkg = JSON.parse(pkgRaw) as {

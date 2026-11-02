@@ -20670,7 +20670,7 @@ module.exports = require("zlib");
  * limitations under the License.
  */
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.PYTHON_REQUIREMENT_NAME_RE = exports.FALLBACK_REPO_DISPLAY_NAME = exports.DEFAULT_GITHUB_SERVER_URL = exports.ENV = exports.GO_PROXY_TIMEOUT_MS = exports.REGISTRY_URL = exports.SCAN_IGNORE = exports.MANIFEST_GLOBS = exports.MANIFEST = exports.SDK_LABEL = exports.SDK_PACKAGE = exports.LANG = void 0;
+exports.PYTHON_REQUIREMENT_NAME_RE = exports.FALLBACK_REPO_DISPLAY_NAME = exports.DEFAULT_GITHUB_SERVER_URL = exports.ENV = exports.GO_PROXY_TIMEOUT_MS = exports.REGISTRY_URL = exports.SCAN_IGNORE = exports.MANIFEST_GLOBS = exports.MANIFEST = exports.SDK_LABEL = exports.ANDROID_MAVEN_COORDS = exports.IOS_SPM_PACKAGE_IDENTITIES = exports.IOS_SPM_REPO_URL_RE = exports.IOS_SPM_REPO_URLS = exports.SDK_PACKAGE = exports.LANG = void 0;
 /**
  * Shared identifiers, package names, registry URLs, and environment
  * variable names used across detectors and utilities.
@@ -20684,6 +20684,11 @@ exports.LANG = {
     GO: "go",
     DOTNET: "dotnet",
     PYTHON: "python",
+    ANDROID: "android",
+    IOS: "ios",
+    REACT_NATIVE: "react-native",
+    REACT: "react",
+    FLUTTER: "flutter",
 };
 /** Package / artifact names as they appear in each ecosystem. */
 exports.SDK_PACKAGE = {
@@ -20695,7 +20700,32 @@ exports.SDK_PACKAGE = {
     RUBY: ["vwo-fme-ruby-sdk", "wingify-fme-ruby-sdk"],
     DOTNET: ["VWO.FME.Sdk", "Wingify.FME.Sdk"],
     PYTHON: ["vwo-fme-python-sdk", "wingify-fme-python-sdk"],
+    ANDROID: ["vwo-fme-android-sdk", "wingify-fme-android-sdk"],
+    /** CocoaPods pod names for the iOS SDK. */
+    IOS: ["VWO-FME", "Wingify-FME"],
+    /** npm package names for the React Native SDK. */
+    REACT_NATIVE: ["vwo-fme-react-native-sdk", "wingify-fme-react-native-sdk"],
+    REACT: ["vwo-fme-react-sdk", "wingify-fme-react-sdk"],
+    /** pub.dev package names for the Flutter SDK. */
+    FLUTTER: ["vwo_fme_flutter_sdk", "wingify_fme_flutter_sdk"],
 };
+/** Swift Package Manager repository URLs for the iOS SDK. */
+exports.IOS_SPM_REPO_URLS = [
+    "https://github.com/wingify/vwo-fme-ios-sdk",
+    "https://github.com/wingify/wingify-fme-ios-sdk",
+];
+/** Matches Wingify FME iOS SPM repository URLs in manifests. */
+exports.IOS_SPM_REPO_URL_RE = /github\.com[:/]wingify\/(?:vwo|wingify)-fme-ios-sdk/i;
+/** `Package.resolved` identity values for the iOS SDK (remoteSourceControl pins). */
+exports.IOS_SPM_PACKAGE_IDENTITIES = [
+    "vwo-fme-ios-sdk",
+    "wingify-fme-ios-sdk",
+];
+/** Maven coordinates for the Android SDK artifacts on Maven Central. */
+exports.ANDROID_MAVEN_COORDS = [
+    { group: "com.vwo.sdk", artifact: exports.SDK_PACKAGE.ANDROID[0] },
+    { group: "com.wingify.sdk", artifact: exports.SDK_PACKAGE.ANDROID[1] },
+];
 /** Human-readable labels used in Slack outdated-SDK messages. */
 exports.SDK_LABEL = {
     NODE: "Node",
@@ -20705,6 +20735,11 @@ exports.SDK_LABEL = {
     RUBY: "Ruby",
     DOTNET: "DotNet",
     PYTHON: "Python",
+    ANDROID: "Android",
+    IOS: "iOS",
+    REACT_NATIVE: "React Native",
+    REACT: "React",
+    FLUTTER: "Flutter",
 };
 /** Manifest file names / suffixes discovered by the scanner. */
 exports.MANIFEST = {
@@ -20715,6 +20750,15 @@ exports.MANIFEST = {
     GEMFILE: "Gemfile",
     CSPROJ: ".csproj",
     REQUIREMENTS_TXT: "requirements.txt",
+    BUILD_GRADLE: "build.gradle",
+    BUILD_GRADLE_KTS: "build.gradle.kts",
+    LIBS_VERSIONS_TOML: "libs.versions.toml",
+    PODFILE: "Podfile",
+    PODFILE_LOCK: "Podfile.lock",
+    PACKAGE_SWIFT: "Package.swift",
+    PACKAGE_RESOLVED: "Package.resolved",
+    PBXPROJ: "project.pbxproj",
+    PUBSPEC_YAML: "pubspec.yaml",
 };
 /** Glob patterns used to locate manifests across the repository. */
 exports.MANIFEST_GLOBS = [
@@ -20725,6 +20769,16 @@ exports.MANIFEST_GLOBS = [
     `**/${exports.MANIFEST.GEMFILE}`,
     `**/*${exports.MANIFEST.CSPROJ}`,
     `**/${exports.MANIFEST.REQUIREMENTS_TXT}`,
+    `**/${exports.MANIFEST.BUILD_GRADLE_KTS}`,
+    `**/${exports.MANIFEST.BUILD_GRADLE}`,
+    `**/${exports.MANIFEST.LIBS_VERSIONS_TOML}`,
+    `**/${exports.MANIFEST.PODFILE}`,
+    `**/${exports.MANIFEST.PODFILE_LOCK}`,
+    `**/${exports.MANIFEST.PACKAGE_SWIFT}`,
+    `**/${exports.MANIFEST.PACKAGE_RESOLVED}`,
+    `**/*/*.xcodeproj/${exports.MANIFEST.PBXPROJ}`,
+    `**/*.xcodeproj/${exports.MANIFEST.PBXPROJ}`,
+    `**/${exports.MANIFEST.PUBSPEC_YAML}`,
 ];
 /** Directories skipped while scanning for manifests. */
 exports.SCAN_IGNORE = [
@@ -20763,6 +20817,28 @@ exports.REGISTRY_URL = {
         `https://pypi.org/pypi/${exports.SDK_PACKAGE.PYTHON[0]}/json`,
         `https://pypi.org/pypi/${exports.SDK_PACKAGE.PYTHON[1]}/json`
     ],
+    ANDROID: [
+        `https://repo1.maven.org/maven2/com/vwo/sdk/${exports.SDK_PACKAGE.ANDROID[0]}/maven-metadata.xml`,
+        `https://repo1.maven.org/maven2/com/wingify/sdk/${exports.SDK_PACKAGE.ANDROID[1]}/maven-metadata.xml`,
+    ],
+    IOS: [
+        `https://trunk.cocoapods.org/api/v1/pods/${exports.SDK_PACKAGE.IOS[0]}`,
+        `https://trunk.cocoapods.org/api/v1/pods/${exports.SDK_PACKAGE.IOS[1]}`,
+        "https://api.github.com/repos/wingify/vwo-fme-ios-sdk/releases/latest",
+        "https://api.github.com/repos/wingify/wingify-fme-ios-sdk/releases/latest",
+    ],
+    REACT_NATIVE: [
+        `https://registry.npmjs.org/${exports.SDK_PACKAGE.REACT_NATIVE[0]}/latest`,
+        `https://registry.npmjs.org/${exports.SDK_PACKAGE.REACT_NATIVE[1]}/latest`,
+    ],
+    REACT: [
+        `https://registry.npmjs.org/${exports.SDK_PACKAGE.REACT[0]}/latest`,
+        `https://registry.npmjs.org/${exports.SDK_PACKAGE.REACT[1]}/latest`,
+    ],
+    FLUTTER: [
+        `https://pub.dev/api/packages/${exports.SDK_PACKAGE.FLUTTER[0]}`,
+        `https://pub.dev/api/packages/${exports.SDK_PACKAGE.FLUTTER[1]}`,
+    ],
 };
 /** Timeout applied only to the Go module proxy request. */
 exports.GO_PROXY_TIMEOUT_MS = 10000;
@@ -20783,6 +20859,351 @@ exports.FALLBACK_REPO_DISPLAY_NAME = "this repository";
  * including optional extras such as `vwo-fme-python-sdk[dev]`.
  */
 exports.PYTHON_REQUIREMENT_NAME_RE = /^(?:vwo|wingify)[-_]fme[-_]python[-_]sdk(?!-)(?:\[[^\]]*\])?/i;
+
+
+/***/ }),
+
+/***/ 1122:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+/**
+ * Copyright 2026 Wingify Software Pvt. Ltd.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const fs_1 = __importDefault(__nccwpck_require__(9896));
+const path_1 = __importDefault(__nccwpck_require__(6928));
+const fetchLatest_1 = __importDefault(__nccwpck_require__(8588));
+const versionCompare_1 = __importDefault(__nccwpck_require__(5492));
+const reportSdk_1 = __nccwpck_require__(3369);
+const constants_1 = __nccwpck_require__(6780);
+/** Strip Gradle/Kotlin comments from a single line (best-effort). */
+function stripLineComment(line) {
+    const withoutBlock = line.replace(/\/\*[\s\S]*?\*\//g, "");
+    const hash = withoutBlock.indexOf("#");
+    const slash = withoutBlock.indexOf("//");
+    let cut = withoutBlock.length;
+    if (hash !== -1)
+        cut = Math.min(cut, hash);
+    if (slash !== -1)
+        cut = Math.min(cut, slash);
+    return withoutBlock.slice(0, cut);
+}
+function readGradleProperties(dir) {
+    const props = {};
+    const filePath = path_1.default.join(dir, "gradle.properties");
+    if (!fs_1.default.existsSync(filePath))
+        return props;
+    const lines = fs_1.default.readFileSync(filePath, "utf8").split(/\r?\n/);
+    for (const line of lines) {
+        const trimmed = stripLineComment(line).trim();
+        if (!trimmed || trimmed.startsWith("#"))
+            continue;
+        const eq = trimmed.indexOf("=");
+        if (eq === -1)
+            continue;
+        const key = trimmed.slice(0, eq).trim();
+        const value = trimmed.slice(eq + 1).trim();
+        props[key] = value;
+    }
+    return props;
+}
+/** Collect `gradle.properties` from the manifest directory up to the repo root. */
+function collectGradleProperties(manifestDir) {
+    const merged = {};
+    let dir = manifestDir;
+    const root = path_1.default.resolve(".");
+    while (dir === root || dir.startsWith(root + path_1.default.sep)) {
+        Object.assign(merged, readGradleProperties(dir));
+        if (dir === root)
+            break;
+        const parent = path_1.default.dirname(dir);
+        if (parent === dir)
+            break;
+        dir = parent;
+    }
+    return merged;
+}
+/** Read `ext { ... }` / `set("key", "value")` assignments from Gradle build files. */
+function collectGradleExtAssignments(manifestDir) {
+    const assignments = {};
+    let dir = manifestDir;
+    const root = path_1.default.resolve(".");
+    while (dir === root || dir.startsWith(root + path_1.default.sep)) {
+        for (const name of ["build.gradle", "build.gradle.kts"]) {
+            const filePath = path_1.default.join(dir, name);
+            if (!fs_1.default.existsSync(filePath))
+                continue;
+            const content = fs_1.default.readFileSync(filePath, "utf8");
+            const extBlock = content.match(/ext\s*\{([^}]*)\}/s)?.[1] ?? "";
+            const block = extBlock || content;
+            for (const m of block.matchAll(/(?:^|[\s;])([A-Za-z_][\w.]*)\s*=\s*['"]([^'"]+)['"]/gm)) {
+                assignments[m[1]] = m[2];
+            }
+            for (const m of content.matchAll(/set\s*\(\s*["']([^"']+)["']\s*,\s*["']([^"']+)["']\s*\)/g)) {
+                assignments[m[1]] = m[2];
+            }
+        }
+        if (dir === root)
+            break;
+        const parent = path_1.default.dirname(dir);
+        if (parent === dir)
+            break;
+        dir = parent;
+    }
+    return assignments;
+}
+function resolveGradleVersionToken(raw, manifestDir) {
+    const trimmed = raw.trim();
+    if (!trimmed)
+        return null;
+    if (/^[\d.]+[+\-]?$/.test(trimmed) || semverLikeRange(trimmed)) {
+        return trimmed;
+    }
+    const propMatch = trimmed.match(/^\$\{([^}]+)\}$/) ?? trimmed.match(/^\$([A-Za-z_][\w.]*)$/);
+    if (!propMatch)
+        return trimmed;
+    const key = propMatch[1].trim();
+    const props = collectGradleProperties(manifestDir);
+    const ext = collectGradleExtAssignments(manifestDir);
+    const resolved = props[key] ?? ext[key];
+    return resolved?.trim() ?? null;
+}
+function semverLikeRange(spec) {
+    return (/^[\^~>=<]/.test(spec) ||
+        spec.includes(",") ||
+        spec.startsWith("[") ||
+        spec.startsWith("("));
+}
+function parseVersionCatalog(content) {
+    const versions = {};
+    const libraries = {};
+    const lines = content.split(/\r?\n/);
+    let section = null;
+    let currentLib = null;
+    let libBuffer = "";
+    const flushLibrary = () => {
+        if (!currentLib)
+            return;
+        const entry = libBuffer.trim();
+        libraries[currentLib] = parseLibraryEntry(entry, versions);
+        currentLib = null;
+        libBuffer = "";
+    };
+    for (const line of lines) {
+        const trimmed = stripLineComment(line).trim();
+        if (!trimmed)
+            continue;
+        if (trimmed === "[versions]") {
+            flushLibrary();
+            section = "versions";
+            continue;
+        }
+        if (trimmed === "[libraries]") {
+            flushLibrary();
+            section = "libraries";
+            continue;
+        }
+        if (trimmed.startsWith("[")) {
+            flushLibrary();
+            section = null;
+            continue;
+        }
+        if (section === "versions") {
+            const m = trimmed.match(/^([A-Za-z0-9_.-]+)\s*=\s*["']?([^"']+)["']?$/);
+            if (m)
+                versions[m[1]] = m[2].trim();
+            continue;
+        }
+        if (section === "libraries") {
+            const oneLine = trimmed.match(/^([A-Za-z0-9_.-]+)\s*=\s*(.+)$/);
+            if (oneLine && !oneLine[2].startsWith("{")) {
+                libraries[oneLine[1]] = parseLibraryEntry(oneLine[2], versions);
+                continue;
+            }
+            const blockStart = trimmed.match(/^([A-Za-z0-9_.-]+)\s*=\s*\{/);
+            if (blockStart) {
+                flushLibrary();
+                currentLib = blockStart[1];
+                libBuffer = trimmed.slice(trimmed.indexOf("{") + 1);
+                if (trimmed.endsWith("}")) {
+                    libBuffer = libBuffer.slice(0, -1);
+                    flushLibrary();
+                }
+                continue;
+            }
+            if (currentLib) {
+                libBuffer += " " + trimmed;
+                if (trimmed.endsWith("}")) {
+                    libBuffer = libBuffer.slice(0, -1);
+                    flushLibrary();
+                }
+            }
+        }
+    }
+    flushLibrary();
+    return { versions, libraries };
+}
+function parseLibraryEntry(entry, versions) {
+    const result = {};
+    const moduleMatch = entry.match(/module\s*=\s*["']([^"']+)["']/);
+    if (moduleMatch)
+        result.module = moduleMatch[1];
+    const groupMatch = entry.match(/group\s*=\s*["']([^"']+)["']/);
+    if (groupMatch)
+        result.group = groupMatch[1];
+    const nameMatch = entry.match(/name\s*=\s*["']([^"']+)["']/);
+    if (nameMatch)
+        result.name = nameMatch[1];
+    const versionMatch = entry.match(/version\s*=\s*["']([^"']+)["']/);
+    if (versionMatch)
+        result.version = versionMatch[1];
+    const versionRefMatch = entry.match(/version\.ref\s*=\s*["']([^"']+)["']/);
+    if (versionRefMatch) {
+        result.versionRef = versionRefMatch[1];
+        result.version = versions[versionRefMatch[1]];
+    }
+    return result;
+}
+function coordinateMatches(group, artifact, coord) {
+    return group === coord.group && artifact === coord.artifact;
+}
+function findInGradleBuild(content, manifestDir) {
+    // A catalog alias such as `implementation(libs.vwo.fme)` does not contain
+    // the version. That version is declared in `libs.versions.toml`, which is
+    // scanned on its own. Resolving the alias here would report both files.
+    for (const coord of constants_1.ANDROID_MAVEN_COORDS) {
+        const g = coord.group.replace(/\./g, "\\.");
+        const a = coord.artifact;
+        const inline = new RegExp(`['"](${g}):(${a}):([^'"]+)['"]`, "g");
+        for (const m of content.matchAll(inline)) {
+            const resolved = resolveGradleVersionToken(m[3], manifestDir);
+            if (resolved) {
+                return {
+                    versionSpec: resolved,
+                    coordinate: `${coord.group}:${coord.artifact}`,
+                };
+            }
+        }
+        const mapGroovy = new RegExp(`group:\\s*['"]${g}['"][^\\n]*name:\\s*['"]${a}['"][^\\n]*version:\\s*['"]([^'"]+)['"]`, "gs");
+        const mapKt = new RegExp(`group\\s*=\\s*"${g}"[^\\n]*name\\s*=\\s*"${a}"[^\\n]*version\\s*=\\s*"([^"]+)"`, "gs");
+        for (const re of [mapGroovy, mapKt]) {
+            const match = re.exec(content);
+            if (match) {
+                const resolved = resolveGradleVersionToken(match[1], manifestDir);
+                if (resolved) {
+                    return {
+                        versionSpec: resolved,
+                        coordinate: `${coord.group}:${coord.artifact}`,
+                    };
+                }
+            }
+        }
+    }
+    return null;
+}
+function findInVersionCatalog(content, _manifestDir) {
+    const { versions, libraries } = parseVersionCatalog(content);
+    for (const entry of Object.values(libraries)) {
+        let group;
+        let artifact;
+        let versionSpec;
+        if (entry.module) {
+            const parts = entry.module.split(":");
+            if (parts.length >= 2) {
+                group = parts[0];
+                artifact = parts[1];
+                versionSpec = entry.version ?? parts[2];
+                if (entry.versionRef && !versionSpec) {
+                    versionSpec = versions[entry.versionRef];
+                }
+            }
+        }
+        else {
+            group = entry.group;
+            artifact = entry.name;
+            versionSpec = entry.version;
+            if (entry.versionRef && !versionSpec) {
+                versionSpec = versions[entry.versionRef];
+            }
+        }
+        if (!group || !artifact || !versionSpec)
+            continue;
+        for (const coord of constants_1.ANDROID_MAVEN_COORDS) {
+            if (coordinateMatches(group, artifact, coord)) {
+                return {
+                    versionSpec,
+                    coordinate: `${coord.group}:${coord.artifact}`,
+                };
+            }
+        }
+    }
+    for (const artifact of constants_1.SDK_PACKAGE.ANDROID) {
+        const key = versions[artifact];
+        if (key) {
+            const coord = constants_1.ANDROID_MAVEN_COORDS.find((c) => c.artifact === artifact);
+            if (coord) {
+                return {
+                    versionSpec: key,
+                    coordinate: `${coord.group}:${coord.artifact}`,
+                };
+            }
+        }
+    }
+    return null;
+}
+/**
+ * Inspect Android build manifests for the Wingify FME Android SDK.
+ *
+ * An inline version in `build.gradle` or `build.gradle.kts` is reported on
+ * that file. A catalog alias such as `implementation(libs.vwo.fme)` is
+ * reported only from `libs.versions.toml`, where the version is written.
+ */
+async function detectAndroid(file) {
+    const content = fs_1.default.readFileSync(file, "utf8");
+    const manifestDir = path_1.default.dirname(path_1.default.resolve(file));
+    let resolved = null;
+    if (file.endsWith("libs.versions.toml")) {
+        resolved = findInVersionCatalog(content, manifestDir);
+    }
+    else if (file.endsWith("build.gradle.kts") || file.endsWith("build.gradle")) {
+        resolved = findInGradleBuild(content, manifestDir);
+    }
+    if (!resolved)
+        return;
+    const latest = await (0, fetchLatest_1.default)(constants_1.LANG.ANDROID);
+    if (!latest) {
+        (0, reportSdk_1.logLatestFetchFailed)("Android", resolved.versionSpec);
+        return;
+    }
+    if ((0, versionCompare_1.default)(resolved.versionSpec, latest)) {
+        await (0, reportSdk_1.reportOutdatedSdk)({
+            sdkLabel: constants_1.SDK_LABEL.ANDROID,
+            file,
+            currentVersion: resolved.versionSpec,
+            latest,
+        });
+        return;
+    }
+    (0, reportSdk_1.logSdkUpToDate)("Android", resolved.versionSpec);
+}
+exports["default"] = detectAndroid;
 
 
 /***/ }),
@@ -20869,6 +21290,217 @@ exports["default"] = detectDotnet;
 
 /***/ }),
 
+/***/ 7803:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+/**
+ * Copyright 2026 Wingify Software Pvt. Ltd.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const fs_1 = __importDefault(__nccwpck_require__(9896));
+const path_1 = __importDefault(__nccwpck_require__(6928));
+const fetchLatest_1 = __importDefault(__nccwpck_require__(8588));
+const versionCompare_1 = __importDefault(__nccwpck_require__(5492));
+const reportSdk_1 = __nccwpck_require__(3369);
+const constants_1 = __nccwpck_require__(6780);
+const PUBSPEC_DEP_SECTIONS = [
+    "dependencies",
+    "dev_dependencies",
+    "dependency_overrides",
+];
+/** Strip YAML comments from a line (best-effort). */
+function stripYamlComment(line) {
+    const hash = line.indexOf("#");
+    if (hash === -1)
+        return line;
+    return line.slice(0, hash);
+}
+/**
+ * Parse `dependencies`, `dev_dependencies`, and `dependency_overrides` from
+ * `pubspec.yaml`.
+ */
+function parsePubspecDependencySections(content) {
+    const deps = {};
+    const lines = content.split(/\r?\n/);
+    let section = null;
+    let currentPkg = null;
+    for (const rawLine of lines) {
+        const line = stripYamlComment(rawLine);
+        const trimmed = line.trim();
+        if (!trimmed)
+            continue;
+        const topLevel = /^([a-z_][\w]*):\s*(.*)$/.exec(line);
+        if (topLevel && !/^\s/.test(line)) {
+            section = topLevel[1];
+            currentPkg = null;
+            continue;
+        }
+        if (!section ||
+            !PUBSPEC_DEP_SECTIONS.includes(section)) {
+            continue;
+        }
+        const pkgInline = /^  ([a-z][a-z0-9_]*):\s*(.+)$/.exec(line);
+        if (pkgInline) {
+            currentPkg = pkgInline[1];
+            const value = pkgInline[2].trim();
+            if (value) {
+                deps[currentPkg] = value.replace(/^["']|["']$/g, "").trim();
+                currentPkg = null;
+            }
+            continue;
+        }
+        const pkgBlockStart = /^  ([a-z][a-z0-9_]*):\s*$/.exec(line);
+        if (pkgBlockStart) {
+            currentPkg = pkgBlockStart[1];
+            continue;
+        }
+        if (currentPkg) {
+            const sdkOnly = /^ {4,}sdk:\s*.+$/.exec(line);
+            if (sdkOnly) {
+                currentPkg = null;
+                continue;
+            }
+            const versionLine = /^ {4,}version:\s*(.+)$/.exec(line);
+            if (versionLine) {
+                deps[currentPkg] = versionLine[1]
+                    .trim()
+                    .replace(/^["']|["']$/g, "")
+                    .trim();
+                currentPkg = null;
+            }
+        }
+    }
+    return deps;
+}
+/** Resolved package versions from the `packages:` section of `pubspec.lock`. */
+function parsePubspecLockPackages(content) {
+    const deps = {};
+    const lines = content.split(/\r?\n/);
+    let inPackages = false;
+    let currentPkg = null;
+    for (const rawLine of lines) {
+        const line = stripYamlComment(rawLine);
+        const trimmed = line.trim();
+        if (!trimmed)
+            continue;
+        const topLevel = /^([a-z_][\w]*):\s*$/.exec(line);
+        if (topLevel && !/^\s/.test(line)) {
+            inPackages = topLevel[1] === "packages";
+            currentPkg = null;
+            continue;
+        }
+        if (!inPackages)
+            continue;
+        const pkgStart = /^  ([a-z][a-z0-9_]*):\s*$/.exec(line);
+        if (pkgStart) {
+            currentPkg = pkgStart[1];
+            continue;
+        }
+        if (currentPkg) {
+            const versionLine = /^ {4,}version:\s*(.+)$/.exec(line);
+            if (versionLine) {
+                deps[currentPkg] = versionLine[1]
+                    .trim()
+                    .replace(/^["']|["']$/g, "")
+                    .trim();
+                currentPkg = null;
+            }
+        }
+    }
+    return deps;
+}
+function versionFromPubspecLock(manifestDir, packageName) {
+    const lockPath = path_1.default.join(manifestDir, "pubspec.lock");
+    if (!fs_1.default.existsSync(lockPath))
+        return null;
+    const lockContent = fs_1.default.readFileSync(lockPath, "utf8");
+    return parsePubspecLockPackages(lockContent)[packageName] ?? null;
+}
+function findInPubspecYaml(content) {
+    const deps = parsePubspecDependencySections(content);
+    for (const packageName of constants_1.SDK_PACKAGE.FLUTTER) {
+        const versionSpec = deps[packageName];
+        if (!versionSpec)
+            continue;
+        if (versionSpec === "sdk" ||
+            versionSpec.startsWith("path:") ||
+            versionSpec.startsWith("git:") ||
+            versionSpec === "{") {
+            continue;
+        }
+        return versionSpec;
+    }
+    return null;
+}
+function findFlutterPackageInPubspec(content) {
+    const deps = parsePubspecDependencySections(content);
+    for (const packageName of constants_1.SDK_PACKAGE.FLUTTER) {
+        if (deps[packageName])
+            return packageName;
+    }
+    return null;
+}
+/**
+ * Inspect `pubspec.yaml` for Wingify FME Flutter SDK dependencies and compare
+ * them with pub.dev releases.
+ */
+async function detectFlutter(file) {
+    if (!file.endsWith("pubspec.yaml"))
+        return;
+    const content = fs_1.default.readFileSync(file, "utf8");
+    const packageName = findFlutterPackageInPubspec(content);
+    if (!packageName)
+        return;
+    const constraintSpec = findInPubspecYaml(content);
+    if (!constraintSpec)
+        return;
+    const manifestDir = path_1.default.dirname(path_1.default.resolve(file));
+    const lockedVersion = versionFromPubspecLock(manifestDir, packageName);
+    const constraintDisplay = constraintSpec.replace(/^v/i, "").trim();
+    const displaySpec = lockedVersion && lockedVersion !== constraintDisplay
+        ? `${lockedVersion} (constraint ${constraintDisplay})`
+        : lockedVersion ?? constraintDisplay;
+    const latest = await (0, fetchLatest_1.default)(constants_1.LANG.FLUTTER);
+    if (!latest) {
+        (0, reportSdk_1.logLatestFetchFailed)("Flutter", displaySpec);
+        return;
+    }
+    const comparePrimary = lockedVersion ?? constraintDisplay;
+    const outdated = (0, versionCompare_1.default)(comparePrimary, latest) ||
+        (lockedVersion != null && (0, versionCompare_1.default)(constraintDisplay, latest));
+    if (outdated) {
+        await (0, reportSdk_1.reportOutdatedSdk)({
+            sdkLabel: constants_1.SDK_LABEL.FLUTTER,
+            file,
+            currentVersion: displaySpec,
+            latest,
+        });
+        return;
+    }
+    (0, reportSdk_1.logSdkUpToDate)("Flutter", displaySpec);
+}
+exports["default"] = detectFlutter;
+
+
+/***/ }),
+
 /***/ 9143:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -20946,6 +21578,444 @@ async function detectGo(file) {
     }
 }
 exports["default"] = detectGo;
+
+
+/***/ }),
+
+/***/ 9016:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+/**
+ * Copyright 2026 Wingify Software Pvt. Ltd.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const fs_1 = __importDefault(__nccwpck_require__(9896));
+const path_1 = __importDefault(__nccwpck_require__(6928));
+const fetchLatest_1 = __importDefault(__nccwpck_require__(8588));
+const versionCompare_1 = __importDefault(__nccwpck_require__(5492));
+const reportSdk_1 = __nccwpck_require__(3369);
+const constants_1 = __nccwpck_require__(6780);
+function readPackageJson(packageJsonPath) {
+    try {
+        return JSON.parse(fs_1.default.readFileSync(packageJsonPath, "utf8"));
+    }
+    catch {
+        return null;
+    }
+}
+function packageJsonDeclaresReactNativeSdk(packageJsonPath) {
+    const pkg = readPackageJson(packageJsonPath);
+    if (!pkg)
+        return false;
+    for (const packageName of constants_1.SDK_PACKAGE.REACT_NATIVE) {
+        if (pkg.dependencies?.[packageName] ||
+            pkg.devDependencies?.[packageName] ||
+            pkg.peerDependencies?.[packageName]) {
+            return true;
+        }
+    }
+    return false;
+}
+/** Standard React Native app layout (`package.json` + `ios/` sibling folder). */
+function packageJsonIsReactNativeApp(packageJsonPath) {
+    const pkg = readPackageJson(packageJsonPath);
+    if (!pkg)
+        return false;
+    return Boolean(pkg.dependencies?.["react-native"] ||
+        pkg.devDependencies?.["react-native"]);
+}
+/** Whether `manifestPath` is part of the iOS native tree for a React Native app root. */
+function isManifestInReactNativeIosTree(manifestPath, rnProjectRoot) {
+    const iosDir = path_1.default.join(rnProjectRoot, "ios");
+    if (manifestPath === iosDir ||
+        manifestPath.startsWith(`${iosDir}${path_1.default.sep}`)) {
+        return true;
+    }
+    // Some apps keep `package.json` inside `ios/` next to `Podfile.lock`.
+    if (path_1.default.basename(rnProjectRoot) === "ios") {
+        return (manifestPath === rnProjectRoot ||
+            manifestPath.startsWith(`${rnProjectRoot}${path_1.default.sep}`));
+    }
+    return false;
+}
+function isCocoaPodsManifestBase(base) {
+    return base === constants_1.MANIFEST.PODFILE || base === constants_1.MANIFEST.PODFILE_LOCK;
+}
+/**
+ * CocoaPods manifests generated for React Native (lockfile lists the RN pod;
+ * `Podfile` often only calls `use_react_native!`).
+ */
+function isReactNativeCocoaPodsManifestContent(content, base) {
+    if (base !== constants_1.MANIFEST.PODFILE && base !== constants_1.MANIFEST.PODFILE_LOCK) {
+        return false;
+    }
+    for (const packageName of constants_1.SDK_PACKAGE.REACT_NATIVE) {
+        if (content.includes(packageName)) {
+            return true;
+        }
+    }
+    if (base === constants_1.MANIFEST.PODFILE &&
+        /\buse_react_native!|\bprepare_react_native_project!/.test(content)) {
+        return true;
+    }
+    return false;
+}
+/**
+ * React Native apps ship native iOS deps under `{app}/ios/`; version checks for
+ * those projects use `package.json` only (see `detectReactNative`).
+ */
+function isReactNativeIosManifest(file, content) {
+    const manifestPath = path_1.default.resolve(file);
+    const manifestDir = path_1.default.dirname(manifestPath);
+    const base = path_1.default.basename(file);
+    // React Native handling applies only to CocoaPods files, not SPM / Xcode manifests.
+    if (!isCocoaPodsManifestBase(base)) {
+        return false;
+    }
+    if (content &&
+        isReactNativeCocoaPodsManifestContent(content, base)) {
+        return true;
+    }
+    // e.g. `react-native/package.json` + `react-native/ios/Podfile.lock`
+    if (path_1.default.basename(manifestDir) === "ios") {
+        const appPackageJson = path_1.default.join(path_1.default.dirname(manifestDir), constants_1.MANIFEST.PACKAGE_JSON);
+        if (fs_1.default.existsSync(appPackageJson)) {
+            if (packageJsonIsReactNativeApp(appPackageJson) ||
+                packageJsonDeclaresReactNativeSdk(appPackageJson)) {
+                return true;
+            }
+        }
+    }
+    let dir = manifestDir;
+    const repoRoot = path_1.default.resolve(process.cwd());
+    for (;;) {
+        const packageJsonPath = path_1.default.join(dir, constants_1.MANIFEST.PACKAGE_JSON);
+        if (fs_1.default.existsSync(packageJsonPath) &&
+            packageJsonDeclaresReactNativeSdk(packageJsonPath) &&
+            isManifestInReactNativeIosTree(manifestPath, dir)) {
+            return true;
+        }
+        if (dir === repoRoot)
+            break;
+        const parent = path_1.default.dirname(dir);
+        if (parent === dir)
+            break;
+        dir = parent;
+    }
+    return false;
+}
+function escapeRegExp(value) {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+/** Read a resolved CocoaPods version from `Podfile.lock` in the same directory. */
+function versionFromPodfileLock(manifestDir, podName) {
+    const lockPath = path_1.default.join(manifestDir, "Podfile.lock");
+    if (!fs_1.default.existsSync(lockPath))
+        return null;
+    const lock = fs_1.default.readFileSync(lockPath, "utf8");
+    const re = new RegExp(String.raw `- ${escapeRegExp(podName)} \(([^)\s]+)\)`);
+    const match = lock.match(re);
+    return match?.[1]?.trim() ?? null;
+}
+function normalizeSwiftPackageRequirement(raw) {
+    const trimmed = raw.trim();
+    if (!trimmed)
+        return null;
+    const fromMatch = trimmed.match(/from\s*:\s*["']([^"']+)["']/i);
+    if (fromMatch) {
+        return `>=${fromMatch[1].trim()}`;
+    }
+    const exactMatch = trimmed.match(/exact\s*:\s*["']([^"']+)["']/i);
+    if (exactMatch) {
+        return exactMatch[1].trim();
+    }
+    const upToNextMajor = trimmed.match(/upToNextMajor(?:Version)?\s*\(\s*from\s*:\s*["']([^"']+)["']\s*\)/i);
+    if (upToNextMajor) {
+        const base = upToNextMajor[1].trim();
+        const major = Number(base.split(".")[0]);
+        if (!Number.isNaN(major)) {
+            return `>=${base} <${major + 1}.0.0`;
+        }
+        return `>=${base}`;
+    }
+    const upToNextMinor = trimmed.match(/upToNextMinor(?:Version)?\s*\(\s*from\s*:\s*["']([^"']+)["']\s*\)/i);
+    if (upToNextMinor) {
+        const base = upToNextMinor[1].trim();
+        const parts = base.split(".").map((p) => Number(p));
+        if (parts.length >= 2 && !parts.some((n) => Number.isNaN(n))) {
+            const [major, minor] = parts;
+            return `>=${base} <${major}.${minor + 1}.0`;
+        }
+        return `>=${base}`;
+    }
+    if (/^[\d.]+[+\-]?$/.test(trimmed) || trimmed.includes("~>")) {
+        return trimmed;
+    }
+    return null;
+}
+function findInPodfile(content, manifestDir) {
+    for (const podName of constants_1.SDK_PACKAGE.IOS) {
+        const re = new RegExp(String.raw `pod\s+['"]${escapeRegExp(podName)}['"]` +
+            String.raw `(?:\s*,\s*['"]([^'"]+)['"])?`, "i");
+        const match = content.match(re);
+        if (!match)
+            continue;
+        const inlineVersion = match[1]?.trim();
+        const versionSpec = inlineVersion || versionFromPodfileLock(manifestDir, podName) || ">=0.0.0";
+        return { versionSpec, label: podName };
+    }
+    return null;
+}
+function findInPodfileLock(content) {
+    for (const podName of constants_1.SDK_PACKAGE.IOS) {
+        const re = new RegExp(String.raw `- ${escapeRegExp(podName)} \(([^)\s]+)\)`);
+        const match = content.match(re);
+        if (match) {
+            return { versionSpec: match[1].trim(), label: podName };
+        }
+    }
+    return null;
+}
+function findInPackageSwift(content) {
+    if (!constants_1.IOS_SPM_REPO_URL_RE.test(content))
+        return null;
+    const packageBlocks = content.matchAll(/\.package\s*\(\s*url:\s*["']([^"']+)["']\s*,([^)]*)\)/gs);
+    for (const block of packageBlocks) {
+        const url = block[1];
+        if (!constants_1.IOS_SPM_REPO_URL_RE.test(url))
+            continue;
+        const requirement = block[2];
+        const normalized = normalizeSwiftPackageRequirement(requirement);
+        if (normalized) {
+            return { versionSpec: normalized, label: url };
+        }
+    }
+    return null;
+}
+function isWingifyIosSpmPin(pin) {
+    const location = pin.location ?? "";
+    if (constants_1.IOS_SPM_REPO_URL_RE.test(location))
+        return true;
+    const identity = (pin.identity ?? "").toLowerCase();
+    return constants_1.IOS_SPM_PACKAGE_IDENTITIES.some((id) => identity === id);
+}
+function findInPackageResolved(content) {
+    let parsed;
+    try {
+        parsed = JSON.parse(content);
+    }
+    catch {
+        return null;
+    }
+    const pins = parsed?.pins;
+    if (!Array.isArray(pins))
+        return null;
+    for (const pin of pins) {
+        const typed = pin;
+        if (!isWingifyIosSpmPin(typed))
+            continue;
+        const version = typed.state?.version?.trim();
+        if (version) {
+            const label = typed.location?.trim() || typed.identity || "vwo-fme-ios-sdk";
+            return { versionSpec: version, label };
+        }
+    }
+    return null;
+}
+/** Xcode SPM lockfile beside an `.xcodeproj` (when Xcode has resolved packages). */
+function packageResolvedBesideXcodeproj(pbxprojFile) {
+    const xcodeprojDir = path_1.default.dirname(path_1.default.resolve(pbxprojFile));
+    if (!xcodeprojDir.endsWith(".xcodeproj"))
+        return null;
+    const resolvedPath = path_1.default.join(xcodeprojDir, "project.xcworkspace", "xcshareddata", "swiftpm", constants_1.MANIFEST.PACKAGE_RESOLVED);
+    return fs_1.default.existsSync(resolvedPath) ? resolvedPath : null;
+}
+function versionFromPackageResolvedAt(filePath) {
+    const content = fs_1.default.readFileSync(filePath, "utf8");
+    return findInPackageResolved(content)?.versionSpec ?? null;
+}
+function versionFromSpmLockfile(file, manifestDir, manifestBase) {
+    if (manifestBase === constants_1.MANIFEST.PBXPROJ) {
+        const beside = packageResolvedBesideXcodeproj(file);
+        if (beside)
+            return versionFromPackageResolvedAt(beside);
+    }
+    const sibling = path_1.default.join(manifestDir, constants_1.MANIFEST.PACKAGE_RESOLVED);
+    if (fs_1.default.existsSync(sibling)) {
+        return versionFromPackageResolvedAt(sibling);
+    }
+    return null;
+}
+function formatConstraintOnlyDisplay(constraintSpec) {
+    const minRange = constraintSpec.match(/^>=([\d.]+)\s*(<.+)$/);
+    if (minRange) {
+        return `${minRange[1]} minimum (SPM ${minRange[2].trim()})`;
+    }
+    const minOnly = constraintSpec.match(/^>=([\d.]+)$/);
+    if (minOnly) {
+        return `${minOnly[1]} minimum`;
+    }
+    return constraintSpec;
+}
+function formatSpmVersionDisplay(constraintSpec, lockedVersion) {
+    if (!lockedVersion)
+        return formatConstraintOnlyDisplay(constraintSpec);
+    const normalizedConstraint = constraintSpec.trim();
+    if (lockedVersion === normalizedConstraint ||
+        semverEquivalent(lockedVersion, normalizedConstraint)) {
+        return lockedVersion;
+    }
+    if (normalizedConstraint.includes("<") || normalizedConstraint.includes(">")) {
+        return `${lockedVersion} (SPM constraint ${normalizedConstraint})`;
+    }
+    return lockedVersion;
+}
+function semverEquivalent(a, b) {
+    const coercedA = a.match(/^[\d.]+/)?.[0];
+    const coercedB = b.match(/^[\d.]+/)?.[0];
+    return Boolean(coercedA && coercedB && coercedA === coercedB);
+}
+function isSpmManifestBase(base) {
+    return (base === constants_1.MANIFEST.PBXPROJ ||
+        base === constants_1.MANIFEST.PACKAGE_SWIFT ||
+        base === constants_1.MANIFEST.PACKAGE_RESOLVED);
+}
+/**
+ * Version to compare against registry latest for SPM manifests.
+ * Uses the lock pin when present; otherwise the declared minimum / exact version,
+ * not whether a semver range would still admit the latest release.
+ */
+function spmVersionForComparison(constraintSpec, lockedVersion) {
+    if (lockedVersion)
+        return lockedVersion;
+    const minFromRange = constraintSpec.match(/^>=([\d.]+)/)?.[1];
+    if (minFromRange)
+        return minFromRange;
+    const trimmed = constraintSpec.trim();
+    if (/^[\d.]+$/.test(trimmed))
+        return trimmed;
+    return constraintSpec;
+}
+function findInPbxproj(content) {
+    const refBlocks = content.matchAll(/repositoryURL\s*=\s*"([^"]+)";\s*requirement\s*=\s*\{([^}]*)\}/gs);
+    for (const block of refBlocks) {
+        const url = block[1];
+        if (!constants_1.IOS_SPM_REPO_URL_RE.test(url))
+            continue;
+        const requirement = block[2];
+        const kind = requirement.match(/kind\s*=\s*(\w+)/)?.[1];
+        const minimumVersion = requirement
+            .match(/minimumVersion\s*=\s*([\d.]+)/)?.[1]
+            ?.trim();
+        const exactVersion = requirement
+            .match(/version\s*=\s*([\d.]+)/)?.[1]
+            ?.trim();
+        if (kind === "exactVersion" && exactVersion) {
+            return { versionSpec: exactVersion, label: url };
+        }
+        if (minimumVersion) {
+            if (kind === "upToNextMajorVersion") {
+                const parts = minimumVersion.split(".").map((p) => Number(p));
+                const major = parts[0];
+                if (!Number.isNaN(major)) {
+                    return {
+                        versionSpec: `>=${minimumVersion} <${major + 1}.0.0`,
+                        label: url,
+                    };
+                }
+            }
+            if (kind === "upToNextMinorVersion") {
+                const parts = minimumVersion.split(".").map((p) => Number(p));
+                if (parts.length >= 2 && !parts.some((n) => Number.isNaN(n))) {
+                    const [major, minor] = parts;
+                    return {
+                        versionSpec: `>=${minimumVersion} <${major}.${minor + 1}.0`,
+                        label: url,
+                    };
+                }
+            }
+            return { versionSpec: `>=${minimumVersion}`, label: url };
+        }
+    }
+    return null;
+}
+/**
+ * Inspect iOS dependency manifests (`Podfile`, `Podfile.lock`, `Package.swift`,
+ * `Package.resolved`, `project.pbxproj`) for Wingify FME iOS SDK dependencies
+ * and compare them with CocoaPods trunk metadata.
+ */
+async function detectIos(file) {
+    const content = fs_1.default.readFileSync(file, "utf8");
+    if (isReactNativeIosManifest(file, content))
+        return;
+    const manifestDir = path_1.default.dirname(path_1.default.resolve(file));
+    const base = path_1.default.basename(file);
+    // Report Xcode SPM pins via `project.pbxproj` (constraint + optional lockfile).
+    if (base === constants_1.MANIFEST.PACKAGE_RESOLVED &&
+        file.includes(`${path_1.default.sep}xcshareddata${path_1.default.sep}swiftpm${path_1.default.sep}`)) {
+        return;
+    }
+    let resolved = null;
+    if (base === "Podfile") {
+        resolved = findInPodfile(content, manifestDir);
+    }
+    else if (base === "Podfile.lock") {
+        resolved = findInPodfileLock(content);
+    }
+    else if (base === "Package.swift") {
+        resolved = findInPackageSwift(content);
+    }
+    else if (base === "Package.resolved") {
+        resolved = findInPackageResolved(content);
+    }
+    else if (base === "project.pbxproj") {
+        resolved = findInPbxproj(content);
+    }
+    if (!resolved)
+        return;
+    const constraintSpec = resolved.versionSpec;
+    const lockedVersion = base === constants_1.MANIFEST.PBXPROJ || base === constants_1.MANIFEST.PACKAGE_SWIFT
+        ? versionFromSpmLockfile(file, manifestDir, base)
+        : null;
+    const displaySpec = formatSpmVersionDisplay(constraintSpec, lockedVersion);
+    const comparePrimary = isSpmManifestBase(base)
+        ? spmVersionForComparison(constraintSpec, lockedVersion)
+        : (lockedVersion ?? constraintSpec);
+    const latest = await (0, fetchLatest_1.default)(constants_1.LANG.IOS);
+    if (!latest) {
+        (0, reportSdk_1.logLatestFetchFailed)("iOS", displaySpec);
+        return;
+    }
+    const outdated = (0, versionCompare_1.default)(comparePrimary, latest);
+    if (outdated) {
+        await (0, reportSdk_1.reportOutdatedSdk)({
+            sdkLabel: constants_1.SDK_LABEL.IOS,
+            file,
+            currentVersion: displaySpec,
+            latest,
+        });
+        return;
+    }
+    (0, reportSdk_1.logSdkUpToDate)("iOS", displaySpec);
+}
+exports["default"] = detectIos;
 
 
 /***/ }),
@@ -21268,6 +22338,333 @@ exports["default"] = detectPython;
 
 /***/ }),
 
+/***/ 4558:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+/**
+ * Copyright 2026 Wingify Software Pvt. Ltd.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const fs_1 = __importDefault(__nccwpck_require__(9896));
+const path_1 = __importDefault(__nccwpck_require__(6928));
+const fetchLatest_1 = __importDefault(__nccwpck_require__(8588));
+const versionCompare_1 = __importDefault(__nccwpck_require__(5492));
+const reportSdk_1 = __nccwpck_require__(3369);
+const constants_1 = __nccwpck_require__(6780);
+/**
+ * Dependency maps written by npm, Yarn, pnpm, and Bun.
+ * npm `install` and `yarn add` both record the SDK in `package.json`.
+ */
+const DEPENDENCY_SECTIONS = [
+    "dependencies",
+    "devDependencies",
+    "optionalDependencies",
+    "peerDependencies",
+];
+function unquote(value) {
+    const trimmed = value.trim();
+    if ((trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+        (trimmed.startsWith("'") && trimmed.endsWith("'"))) {
+        return trimmed.slice(1, -1).trim();
+    }
+    return trimmed;
+}
+/** Strip an unquoted YAML `#` comment. */
+function stripYamlComment(line) {
+    let inSingle = false;
+    let inDouble = false;
+    for (let i = 0; i < line.length; i++) {
+        const ch = line[i];
+        if (ch === "'" && !inDouble)
+            inSingle = !inSingle;
+        else if (ch === '"' && !inSingle)
+            inDouble = !inDouble;
+        else if (ch === "#" && !inSingle && !inDouble)
+            return line.slice(0, i);
+    }
+    return line;
+}
+/**
+ * Read the default `catalog` and named `catalogs` from a pnpm workspace file.
+ * Versions declared as `catalog:` / `catalog:<name>` in package.json live here,
+ * the same way a Gradle version catalog lives outside `build.gradle`.
+ */
+function parsePnpmCatalogs(content) {
+    const defaultCatalog = {};
+    const named = {};
+    let section = null;
+    let namedKey = null;
+    let namedIndent = -1;
+    for (const rawLine of content.split(/\r?\n/)) {
+        const line = stripYamlComment(rawLine);
+        if (!line.trim())
+            continue;
+        const indent = line.length - line.trimStart().length;
+        const trimmed = line.trim();
+        const kv = /^([^:#][^:]*):\s*(.*)$/.exec(trimmed);
+        if (!kv)
+            continue;
+        const key = unquote(kv[1].trim());
+        const value = unquote(kv[2].trim());
+        if (indent === 0) {
+            namedKey = null;
+            namedIndent = -1;
+            if (key === "catalog")
+                section = "catalog";
+            else if (key === "catalogs")
+                section = "catalogs";
+            else
+                section = null;
+            continue;
+        }
+        if (section === "catalog" && value) {
+            defaultCatalog[key] = value;
+            continue;
+        }
+        if (section !== "catalogs")
+            continue;
+        if (!value) {
+            namedKey = key;
+            namedIndent = indent;
+            named[key] = named[key] ?? {};
+            continue;
+        }
+        if (namedKey && indent > namedIndent) {
+            named[namedKey][key] = value;
+        }
+    }
+    return { defaultCatalog, named };
+}
+/** Resolve `catalog:` / `catalog:<name>` from the nearest `pnpm-workspace.yaml`. */
+function resolveCatalogVersion(manifestDir, packageName, catalogName) {
+    let dir = manifestDir;
+    const root = path_1.default.resolve(".");
+    while (dir === root || dir.startsWith(root + path_1.default.sep)) {
+        const filePath = path_1.default.join(dir, "pnpm-workspace.yaml");
+        if (fs_1.default.existsSync(filePath)) {
+            const parsed = parsePnpmCatalogs(fs_1.default.readFileSync(filePath, "utf8"));
+            const table = catalogName
+                ? parsed.named[catalogName]
+                : parsed.defaultCatalog;
+            const spec = table?.[packageName]?.trim();
+            if (spec)
+                return spec;
+        }
+        if (dir === root)
+            break;
+        const parent = path_1.default.dirname(dir);
+        if (parent === dir)
+            break;
+        dir = parent;
+    }
+    return null;
+}
+/**
+ * Turn a package.json version field into a comparable semver spec.
+ * Git, file, and workspace links have no registry version and are skipped.
+ */
+function normalizeVersionSpec(spec, packageName, manifestDir) {
+    const trimmed = spec.trim();
+    if (!trimmed || trimmed.startsWith("$"))
+        return null;
+    if (/^(workspace|file|link|portal):/i.test(trimmed))
+        return null;
+    if (/^(git\+|github:|gitlab:|bitbucket:|https?:)/i.test(trimmed))
+        return null;
+    const catalog = /^catalog:(.*)$/.exec(trimmed);
+    if (catalog) {
+        return resolveCatalogVersion(manifestDir, packageName, catalog[1].trim());
+    }
+    const npmAlias = /^npm:[^@\s]+@(.+)$/.exec(trimmed);
+    if (npmAlias)
+        return npmAlias[1].trim();
+    return trimmed;
+}
+function dependencySpec(section, packageName) {
+    const raw = section?.[packageName];
+    return typeof raw === "string" ? raw : null;
+}
+/** Depth-first search of npm overrides / Yarn resolutions / pnpm overrides. */
+function findOverrideSpec(value, packageName) {
+    if (!value || typeof value !== "object" || Array.isArray(value))
+        return null;
+    for (const [key, child] of Object.entries(value)) {
+        const leaf = key.split("/").pop() ?? key;
+        if (leaf === packageName && typeof child === "string")
+            return child;
+        if (child && typeof child === "object") {
+            const nested = findOverrideSpec(child, packageName);
+            if (nested)
+                return nested;
+        }
+    }
+    return null;
+}
+function findInPackageJson(pkg, manifestDir) {
+    for (const sectionName of DEPENDENCY_SECTIONS) {
+        const section = pkg[sectionName];
+        for (const packageName of constants_1.SDK_PACKAGE.REACT) {
+            const raw = dependencySpec(section, packageName);
+            if (!raw)
+                continue;
+            const spec = normalizeVersionSpec(raw, packageName, manifestDir);
+            if (spec)
+                return spec;
+        }
+    }
+    const overrideSources = [pkg.overrides, pkg.resolutions, pkg.pnpm?.overrides];
+    for (const source of overrideSources) {
+        if (!source)
+            continue;
+        for (const packageName of constants_1.SDK_PACKAGE.REACT) {
+            const raw = findOverrideSpec(source, packageName);
+            if (!raw)
+                continue;
+            const spec = normalizeVersionSpec(raw, packageName, manifestDir);
+            if (spec)
+                return spec;
+        }
+    }
+    return null;
+}
+/**
+ * Inspect a `package.json` for the Wingify FME React SDK.
+ *
+ * npm and Yarn (and pnpm / Bun) all declare the dependency in `package.json`.
+ * The detector checks every dependency map, npm `overrides`, Yarn `resolutions`,
+ * pnpm overrides, and pnpm catalog references in `pnpm-workspace.yaml`.
+ */
+async function detectReact(file) {
+    if (!file.endsWith("package.json"))
+        return;
+    let pkg;
+    try {
+        pkg = JSON.parse(fs_1.default.readFileSync(file, "utf8"));
+    }
+    catch {
+        return;
+    }
+    const versionSpec = findInPackageJson(pkg, path_1.default.dirname(path_1.default.resolve(file)));
+    if (!versionSpec)
+        return;
+    const latest = await (0, fetchLatest_1.default)(constants_1.LANG.REACT);
+    if (!latest) {
+        (0, reportSdk_1.logLatestFetchFailed)("React", versionSpec);
+        return;
+    }
+    if ((0, versionCompare_1.default)(versionSpec, latest)) {
+        await (0, reportSdk_1.reportOutdatedSdk)({
+            sdkLabel: constants_1.SDK_LABEL.REACT,
+            file,
+            currentVersion: versionSpec,
+            latest,
+        });
+        return;
+    }
+    (0, reportSdk_1.logSdkUpToDate)("React", versionSpec);
+}
+exports["default"] = detectReact;
+
+
+/***/ }),
+
+/***/ 3173:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+/**
+ * Copyright 2026 Wingify Software Pvt. Ltd.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const fs_1 = __importDefault(__nccwpck_require__(9896));
+const fetchLatest_1 = __importDefault(__nccwpck_require__(8588));
+const versionCompare_1 = __importDefault(__nccwpck_require__(5492));
+const reportSdk_1 = __nccwpck_require__(3369);
+const constants_1 = __nccwpck_require__(6780);
+/**
+ * Inspect a `package.json` file and, if `vwo-fme-react-native-sdk` or
+ * `wingify-fme-react-native-sdk` is present, compare the declared version/range
+ * against the latest npm release.
+ */
+async function detectReactNative(file) {
+    if (!file.endsWith("package.json"))
+        return;
+    const pkgRaw = fs_1.default.readFileSync(file, "utf8");
+    let pkg;
+    try {
+        pkg = JSON.parse(pkgRaw);
+    }
+    catch {
+        return;
+    }
+    let versionSpec;
+    let packageName;
+    for (const packageName_ of constants_1.SDK_PACKAGE.REACT_NATIVE) {
+        versionSpec =
+            pkg.dependencies?.[packageName_] ||
+                pkg.devDependencies?.[packageName_] ||
+                pkg.peerDependencies?.[packageName_];
+        if (versionSpec) {
+            packageName = packageName_;
+            break;
+        }
+    }
+    if (!versionSpec || !packageName)
+        return;
+    const latest = await (0, fetchLatest_1.default)(constants_1.LANG.REACT_NATIVE);
+    if (!latest) {
+        (0, reportSdk_1.logLatestFetchFailed)("React Native", versionSpec);
+        return;
+    }
+    if ((0, versionCompare_1.default)(versionSpec, latest)) {
+        await (0, reportSdk_1.reportOutdatedSdk)({
+            sdkLabel: constants_1.SDK_LABEL.REACT_NATIVE,
+            file,
+            currentVersion: versionSpec,
+            latest,
+        });
+        return;
+    }
+    (0, reportSdk_1.logSdkUpToDate)("React Native", versionSpec);
+}
+exports["default"] = detectReactNative;
+
+
+/***/ }),
+
 /***/ 8029:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -21365,6 +22762,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+const path_1 = __importDefault(__nccwpck_require__(6928));
 const scanner_1 = __importDefault(__nccwpck_require__(8725));
 const node_1 = __importDefault(__nccwpck_require__(2081));
 const java_1 = __importDefault(__nccwpck_require__(3189));
@@ -21373,6 +22771,11 @@ const go_1 = __importDefault(__nccwpck_require__(9143));
 const ruby_1 = __importDefault(__nccwpck_require__(8029));
 const dotnet_1 = __importDefault(__nccwpck_require__(5288));
 const python_1 = __importDefault(__nccwpck_require__(5099));
+const android_1 = __importDefault(__nccwpck_require__(1122));
+const ios_1 = __importDefault(__nccwpck_require__(9016));
+const reactNative_1 = __importDefault(__nccwpck_require__(3173));
+const react_1 = __importDefault(__nccwpck_require__(4558));
+const flutter_1 = __importDefault(__nccwpck_require__(7803));
 const constants_1 = __nccwpck_require__(6780);
 /**
  * Entrypoint for the GitHub Action.
@@ -21392,6 +22795,8 @@ async function run() {
     for (const file of files) {
         if (file.endsWith(constants_1.MANIFEST.PACKAGE_JSON)) {
             await (0, node_1.default)(file);
+            await (0, reactNative_1.default)(file);
+            await (0, react_1.default)(file);
         }
         if (file.endsWith(constants_1.MANIFEST.POM_XML)) {
             await (0, java_1.default)(file);
@@ -21410,6 +22815,26 @@ async function run() {
         }
         if (file.endsWith(constants_1.MANIFEST.REQUIREMENTS_TXT)) {
             await (0, python_1.default)(file);
+        }
+        if (file.endsWith(constants_1.MANIFEST.BUILD_GRADLE_KTS)) {
+            await (0, android_1.default)(file);
+        }
+        else if (file.endsWith(constants_1.MANIFEST.BUILD_GRADLE)) {
+            await (0, android_1.default)(file);
+        }
+        if (file.endsWith(constants_1.MANIFEST.PUBSPEC_YAML)) {
+            await (0, flutter_1.default)(file);
+        }
+        if (file.endsWith(constants_1.MANIFEST.LIBS_VERSIONS_TOML)) {
+            await (0, android_1.default)(file);
+        }
+        const iosManifest = path_1.default.basename(file);
+        if (iosManifest === constants_1.MANIFEST.PODFILE ||
+            iosManifest === constants_1.MANIFEST.PODFILE_LOCK ||
+            iosManifest === constants_1.MANIFEST.PACKAGE_SWIFT ||
+            iosManifest === constants_1.MANIFEST.PACKAGE_RESOLVED ||
+            iosManifest === constants_1.MANIFEST.PBXPROJ) {
+            await (0, ios_1.default)(file);
         }
     }
 }
@@ -21459,20 +22884,24 @@ const constants_1 = __nccwpck_require__(6780);
  * - go     -> Go module proxy
  * - dotnet -> NuGet
  * - python -> PyPI
+ * - android -> Maven Central (AAR artifacts)
+ * - ios     -> CocoaPods trunk, GitHub releases (SPM source repos)
+ * - react-native -> npm (vwo-fme-react-native-sdk / wingify-fme-react-native-sdk)
+ * - react        -> npm (vwo-fme-react-sdk / wingify-fme-react-sdk)
+ * - flutter      -> pub.dev (vwo_fme_flutter_sdk / wingify_fme_flutter_sdk)
  *
  * Returns `null` when the SDK is unknown or the registry query fails.
  */
 async function fetchLatest(lang) {
     try {
-        if (lang === constants_1.LANG.NODE) {
-            // Try both vwo and wingify packages
-            for (const url of constants_1.REGISTRY_URL.NODE) {
+        if (lang === constants_1.LANG.NODE || lang === constants_1.LANG.REACT_NATIVE) {
+            const urls = lang === constants_1.LANG.NODE ? constants_1.REGISTRY_URL.NODE : constants_1.REGISTRY_URL.REACT_NATIVE;
+            for (const url of urls) {
                 try {
                     const res = await axios_1.default.get(url);
                     return res.data.version;
                 }
-                catch (err) {
-                    // Continue to next URL if this one fails
+                catch {
                     continue;
                 }
             }
@@ -21564,6 +22993,54 @@ async function fetchLatest(lang) {
             }
             return null;
         }
+        if (lang === constants_1.LANG.ANDROID) {
+            for (const url of constants_1.REGISTRY_URL.ANDROID) {
+                try {
+                    const res = await axios_1.default.get(url, { responseType: "text" });
+                    const xml = String(res.data);
+                    const release = xml.match(/<release>\s*([^<\s]+)\s*<\/release>/)?.[1];
+                    const latest = xml.match(/<latest>\s*([^<\s]+)\s*<\/latest>/)?.[1];
+                    const version = (release || latest || null);
+                    if (version)
+                        return version;
+                }
+                catch {
+                    continue;
+                }
+            }
+            return null;
+        }
+        if (lang === constants_1.LANG.IOS) {
+            const candidates = [];
+            for (const url of constants_1.REGISTRY_URL.IOS) {
+                try {
+                    const res = await axios_1.default.get(url);
+                    if (url.includes("api.github.com")) {
+                        const tag = res.data?.tag_name?.replace(/^v/i, "");
+                        if (tag && semver_1.default.coerce(tag)) {
+                            candidates.push(semver_1.default.coerce(tag).version);
+                        }
+                        continue;
+                    }
+                    const versions = res.data?.versions;
+                    if (!Array.isArray(versions) || versions.length === 0)
+                        continue;
+                    const highest = versions
+                        .map((v) => v.name)
+                        .filter((name) => semver_1.default.coerce(name))
+                        .sort((a, b) => semver_1.default.compare(semver_1.default.coerce(a), semver_1.default.coerce(b)))
+                        .pop() ?? null;
+                    if (highest)
+                        candidates.push(highest);
+                }
+                catch {
+                    continue;
+                }
+            }
+            if (candidates.length === 0)
+                return null;
+            return candidates.sort((a, b) => semver_1.default.compare(semver_1.default.coerce(a), semver_1.default.coerce(b)))[candidates.length - 1];
+        }
         if (lang === constants_1.LANG.PYTHON) {
             // Try both vwo and wingify packages
             for (const url of constants_1.REGISTRY_URL.PYTHON) {
@@ -21587,6 +23064,42 @@ async function fetchLatest(lang) {
                 }
             }
             return null;
+        }
+        if (lang === constants_1.LANG.REACT) {
+            const candidates = [];
+            for (const url of constants_1.REGISTRY_URL.REACT) {
+                try {
+                    const res = await axios_1.default.get(url);
+                    const version = res.data?.version;
+                    if (version && semver_1.default.coerce(version)) {
+                        candidates.push(version);
+                    }
+                }
+                catch {
+                    continue;
+                }
+            }
+            if (candidates.length === 0)
+                return null;
+            return candidates.sort((a, b) => semver_1.default.compare(semver_1.default.coerce(a), semver_1.default.coerce(b)))[candidates.length - 1];
+        }
+        if (lang === constants_1.LANG.FLUTTER) {
+            const candidates = [];
+            for (const url of constants_1.REGISTRY_URL.FLUTTER) {
+                try {
+                    const res = await axios_1.default.get(url);
+                    const version = res.data?.latest?.version;
+                    if (version && semver_1.default.coerce(version)) {
+                        candidates.push(version);
+                    }
+                }
+                catch {
+                    continue;
+                }
+            }
+            if (candidates.length === 0)
+                return null;
+            return candidates.sort((a, b) => semver_1.default.compare(semver_1.default.coerce(a), semver_1.default.coerce(b)))[candidates.length - 1];
         }
         return null;
     }

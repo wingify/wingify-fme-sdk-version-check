@@ -24,10 +24,7 @@ import {
 } from "../utils/reportSdk";
 import { LANG, SDK_LABEL, SDK_PACKAGE } from "../constants";
 
-/**
- * Inspect a `.csproj` file and, if the `VWO.FME.Sdk` or `Wingify.FME.Sdk` package reference is present,
- * compare its version (or range) with the latest version published to NuGet.
- */
+/** Scans `.csproj` for the FME .NET package, compares to NuGet latest, and reports. */
 async function detectDotnet(file: string): Promise<void> {
   const xml = fs.readFileSync(file, "utf8");
 

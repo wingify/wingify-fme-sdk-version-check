@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import path from "path";
 import scanRepo from "./utils/scanner";
 import detectNode from "./detectors/node";
 import detectJava from "./detectors/java";
@@ -22,6 +23,11 @@ import detectGo from "./detectors/go";
 import detectRuby from "./detectors/ruby";
 import detectDotnet from "./detectors/dotnet";
 import detectPython from "./detectors/python";
+import detectAndroid from "./detectors/android";
+import detectIos from "./detectors/ios";
+import detectReactNative from "./detectors/reactNative";
+import detectReact from "./detectors/react";
+import detectFlutter from "./detectors/flutter";
 import { ENV, MANIFEST } from "./constants";
 
 /**
@@ -43,6 +49,8 @@ async function run(): Promise<void> {
   for (const file of files) {
     if (file.endsWith(MANIFEST.PACKAGE_JSON)) {
       await detectNode(file);
+      await detectReactNative(file);
+      await detectReact(file);
     }
 
     if (file.endsWith(MANIFEST.POM_XML)) {
@@ -67,6 +75,31 @@ async function run(): Promise<void> {
 
     if (file.endsWith(MANIFEST.REQUIREMENTS_TXT)) {
       await detectPython(file);
+    }
+
+    if (file.endsWith(MANIFEST.BUILD_GRADLE_KTS)) {
+      await detectAndroid(file);
+    } else if (file.endsWith(MANIFEST.BUILD_GRADLE)) {
+      await detectAndroid(file);
+    }
+
+    if (file.endsWith(MANIFEST.PUBSPEC_YAML)) {
+      await detectFlutter(file);
+    }
+
+    if (file.endsWith(MANIFEST.LIBS_VERSIONS_TOML)) {
+      await detectAndroid(file);
+    }
+
+    const iosManifest = path.basename(file);
+    if (
+      iosManifest === MANIFEST.PODFILE ||
+      iosManifest === MANIFEST.PODFILE_LOCK ||
+      iosManifest === MANIFEST.PACKAGE_SWIFT ||
+      iosManifest === MANIFEST.PACKAGE_RESOLVED ||
+      iosManifest === MANIFEST.PBXPROJ
+    ) {
+      await detectIos(file);
     }
   }
 }

@@ -28,6 +28,11 @@ export const LANG = {
   GO: "go",
   DOTNET: "dotnet",
   PYTHON: "python",
+  ANDROID: "android",
+  IOS: "ios",
+  REACT_NATIVE: "react-native",
+  REACT: "react",
+  FLUTTER: "flutter",
 } as const;
 
 export type Lang = (typeof LANG)[keyof typeof LANG];
@@ -42,7 +47,37 @@ export const SDK_PACKAGE = {
   RUBY: ["vwo-fme-ruby-sdk", "wingify-fme-ruby-sdk"],
   DOTNET: ["VWO.FME.Sdk", "Wingify.FME.Sdk"],
   PYTHON: ["vwo-fme-python-sdk", "wingify-fme-python-sdk"],
+  ANDROID: ["vwo-fme-android-sdk", "wingify-fme-android-sdk"],
+  /** CocoaPods pod names for the iOS SDK. */
+  IOS: ["VWO-FME", "Wingify-FME"],
+  /** npm package names for the React Native SDK. */
+  REACT_NATIVE: ["vwo-fme-react-native-sdk", "wingify-fme-react-native-sdk"],
+  REACT: ["vwo-fme-react-sdk", "wingify-fme-react-sdk"],
+  /** pub.dev package names for the Flutter SDK. */
+  FLUTTER: ["vwo_fme_flutter_sdk", "wingify_fme_flutter_sdk"],
 } as const;
+
+/** Swift Package Manager repository URLs for the iOS SDK. */
+export const IOS_SPM_REPO_URLS = [
+  "https://github.com/wingify/vwo-fme-ios-sdk",
+  "https://github.com/wingify/wingify-fme-ios-sdk",
+] as const;
+
+/** Matches Wingify FME iOS SPM repository URLs in manifests. */
+export const IOS_SPM_REPO_URL_RE =
+  /github\.com[:/]wingify\/(?:vwo|wingify)-fme-ios-sdk/i;
+
+/** `Package.resolved` identity values for the iOS SDK (remoteSourceControl pins). */
+export const IOS_SPM_PACKAGE_IDENTITIES = [
+  "vwo-fme-ios-sdk",
+  "wingify-fme-ios-sdk",
+] as const;
+
+/** Maven coordinates for the Android SDK artifacts on Maven Central. */
+export const ANDROID_MAVEN_COORDS = [
+  { group: "com.vwo.sdk", artifact: SDK_PACKAGE.ANDROID[0] },
+  { group: "com.wingify.sdk", artifact: SDK_PACKAGE.ANDROID[1] },
+] as const;
 
 /** Human-readable labels used in Slack outdated-SDK messages. */
 export const SDK_LABEL = {
@@ -53,6 +88,11 @@ export const SDK_LABEL = {
   RUBY: "Ruby",
   DOTNET: "DotNet",
   PYTHON: "Python",
+  ANDROID: "Android",
+  IOS: "iOS",
+  REACT_NATIVE: "React Native",
+  REACT: "React",
+  FLUTTER: "Flutter",
 } as const;
 
 /** Manifest file names / suffixes discovered by the scanner. */
@@ -64,6 +104,15 @@ export const MANIFEST = {
   GEMFILE: "Gemfile",
   CSPROJ: ".csproj",
   REQUIREMENTS_TXT: "requirements.txt",
+  BUILD_GRADLE: "build.gradle",
+  BUILD_GRADLE_KTS: "build.gradle.kts",
+  LIBS_VERSIONS_TOML: "libs.versions.toml",
+  PODFILE: "Podfile",
+  PODFILE_LOCK: "Podfile.lock",
+  PACKAGE_SWIFT: "Package.swift",
+  PACKAGE_RESOLVED: "Package.resolved",
+  PBXPROJ: "project.pbxproj",
+  PUBSPEC_YAML: "pubspec.yaml",
 } as const;
 
 /** Glob patterns used to locate manifests across the repository. */
@@ -75,6 +124,16 @@ export const MANIFEST_GLOBS: string[] = [
   `**/${MANIFEST.GEMFILE}`,
   `**/*${MANIFEST.CSPROJ}`,
   `**/${MANIFEST.REQUIREMENTS_TXT}`,
+  `**/${MANIFEST.BUILD_GRADLE_KTS}`,
+  `**/${MANIFEST.BUILD_GRADLE}`,
+  `**/${MANIFEST.LIBS_VERSIONS_TOML}`,
+  `**/${MANIFEST.PODFILE}`,
+  `**/${MANIFEST.PODFILE_LOCK}`,
+  `**/${MANIFEST.PACKAGE_SWIFT}`,
+  `**/${MANIFEST.PACKAGE_RESOLVED}`,
+  `**/*/*.xcodeproj/${MANIFEST.PBXPROJ}`,
+  `**/*.xcodeproj/${MANIFEST.PBXPROJ}`,
+  `**/${MANIFEST.PUBSPEC_YAML}`,
 ];
 
 /** Directories skipped while scanning for manifests. */
@@ -114,6 +173,28 @@ export const REGISTRY_URL = {
   PYTHON: [
     `https://pypi.org/pypi/${SDK_PACKAGE.PYTHON[0]}/json`,
     `https://pypi.org/pypi/${SDK_PACKAGE.PYTHON[1]}/json`
+  ],
+  ANDROID: [
+    `https://repo1.maven.org/maven2/com/vwo/sdk/${SDK_PACKAGE.ANDROID[0]}/maven-metadata.xml`,
+    `https://repo1.maven.org/maven2/com/wingify/sdk/${SDK_PACKAGE.ANDROID[1]}/maven-metadata.xml`,
+  ],
+  IOS: [
+    `https://trunk.cocoapods.org/api/v1/pods/${SDK_PACKAGE.IOS[0]}`,
+    `https://trunk.cocoapods.org/api/v1/pods/${SDK_PACKAGE.IOS[1]}`,
+    "https://api.github.com/repos/wingify/vwo-fme-ios-sdk/releases/latest",
+    "https://api.github.com/repos/wingify/wingify-fme-ios-sdk/releases/latest",
+  ],
+  REACT_NATIVE: [
+    `https://registry.npmjs.org/${SDK_PACKAGE.REACT_NATIVE[0]}/latest`,
+    `https://registry.npmjs.org/${SDK_PACKAGE.REACT_NATIVE[1]}/latest`,
+  ],
+  REACT: [
+    `https://registry.npmjs.org/${SDK_PACKAGE.REACT[0]}/latest`,
+    `https://registry.npmjs.org/${SDK_PACKAGE.REACT[1]}/latest`,
+  ],
+  FLUTTER: [
+    `https://pub.dev/api/packages/${SDK_PACKAGE.FLUTTER[0]}`,
+    `https://pub.dev/api/packages/${SDK_PACKAGE.FLUTTER[1]}`,
   ],
 } as const;
 
